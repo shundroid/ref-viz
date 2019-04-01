@@ -1,0 +1,14 @@
+{
+  "name": "ref-viz",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "shundroid <shundroidk@gmail.com> (https://github.com/shundroid)",
+  "license": "MIT",
+  "dependencies": {
+    "acorn": "^6.1.1"
+  }
+}
