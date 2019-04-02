@@ -1,29 +1,21 @@
-var a = 0;
-
-const b = 0, d = 2;
-
-let f = 10, g;
-
-let hoge = {
-  aa: "aaa",
-  f: () => {
-    console.log('hoge')
-  },
-  f2() {
-    console.log("fuga")
-  },
-  obj: {
-    aa: "aaa"
+var a = "aaa", b, c = "c";
+a = "";
+a += 2;
+a === b;
+var hoge = {
+  fuga: {
+   	aa: a
   }
 }
-
-function fn() {
-  a++;
-  function fn2() {
-
-  }
+hoge.fuga = "A"
+function d() {
+  b = "cc";
 }
-
-function main() {
-  fn();
+if (a === "a") {
+  b = "hoge" 
+}
+for (let i = 0; i < 3; i++) {
+  i = "aa"
+}
+var fn = function () {
 }

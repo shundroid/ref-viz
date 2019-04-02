@@ -3,6 +3,7 @@ const fs = require('fs')
 
 const Program = require('./lib/program')
 const Declaration = require('./lib/declaration')
+const Reference = require('./lib/reference')
 
 const programs = []
 
@@ -19,6 +20,7 @@ fs.readFile(entryFile, (err, data) => {
 })
 
 function readProgram(filePath, program) {
+  console.log(program)
   const { declarations, references } = readFunction(['root'], program)
   return new Program(filePath, declarations, references)
 }
@@ -26,6 +28,7 @@ function readProgram(filePath, program) {
 function readFunction(belongs, fn) {
   const declarations = []
   const references = []
+  console.log(fn)
   for (let node of fn.body) {
     switch (node.type) {
       case 'VariableDeclaration':
@@ -48,7 +51,7 @@ function readFunction(belongs, fn) {
                 const fn = readFunction([
                   ...belongs,
                   declarator.id.name
-                ], declarator.init.body.body)
+                ], declarator.init.body)
                 declarations.push(...fn.declarations)
                 references.push(...fn.references)
                 break
@@ -64,6 +67,15 @@ function readFunction(belongs, fn) {
         ], node.body)
         declarations.push(...fn.declarations)
         references.push(...fn.references)
+        break
+      case 'ExpressionStatement':
+        const expression = node.expression
+        if (expression.left.type === 'Identifier') {
+          references.push(new Reference(expression.left.name, belongs))
+        }
+        if (expression.right.type === 'Identifier') {
+          references.push(new Reference(expression.right.name, belongs))
+        }
     }
   }
   return { declarations, references }
@@ -94,4 +106,15 @@ function readObject(belongs, objectExpression) {
     }
   }
   return { declarations, references }
+}
+
+function toStringMemberExpression(memberExpression) {
+  const members = []
+  switch (memberExpression.object.type) {
+    case 'MemberExpression':
+      toStringMemberExpression(memberExpression.object)
+      break
+    case 'Identifier':
+      members.push(memberExpression.object.name)
+  }
 }
