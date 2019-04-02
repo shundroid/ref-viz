@@ -81,4 +81,28 @@ describe('readFunction', () => {
       new Reference('obj1.fn', ['root', 'a'])
     ])
   })
+  it('should support if statements', () => {
+    const code = acorn.Parser.parse(`
+    const a = "hoge"
+    if (a === "hoge") {
+      let b = a + c
+      b += "fuga"
+    }
+    `)
+    assert.deepEqual(readFunction(['root'], code), {
+      declarations: [
+        new Declaration('a', ['root']),
+        new Declaration('b', ['root'])
+      ],
+      references: [
+        new Reference('a', ['root']),
+        new Reference('a', ['root']),
+        new Reference('c', ['root']),
+        new Reference('b', ['root'])
+      ]
+    })
+  })
+  it('should support for statements', () => {
+
+  })
 })
