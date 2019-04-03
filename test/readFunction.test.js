@@ -3,6 +3,7 @@ const acorn = require('acorn')
 const readFunction = require('../src/readFunction')
 const Declaration = require('../src/lib/declaration')
 const Reference = require('../src/lib/reference')
+const convert = require('../src/lib/symbolForTest')
 
 describe('readFunction', () => {
   it('should make variable declarations', () => {
@@ -102,7 +103,47 @@ describe('readFunction', () => {
       ]
     })
   })
-  it('should support for statements', () => {
+  it('should support for array', () => {
+    const code = acorn.Parser.parse(`
+    const array = [a,b,c,10,...d]
+    `)
+    assert.deepEqual(readFunction(['root'], code), {
+      declarations: [
+        new Declaration('array', ['root'])
+      ],
+      references: [
+        new Reference('a', ['root']),
+        new Reference('b', ['root']),
+        new Reference('c', ['root']),
+        new Reference('d', ['root'])
+      ]
+    })
+  })
+  it('should run deepEqual correctly in comparing Symbols', () => {
+    assert.deepEqual(Symbol('a').toString(), Symbol('a').toString())
+    assert.notDeepEqual(Symbol('a').toString(), Symbol('b').toString())
+  })
+  it('should make belongs of anonymous function', () => {
+    const code = acorn.Parser.parse(`
+    let a = 0, b
 
+    call(function() {
+      const a = b
+    })
+    `)
+    const result = readFunction(['root'], code)
+    convert(result.declarations)
+    convert(result.references)
+    assert.deepEqual(result, {
+      declarations: [
+        new Declaration('a', ['root']),
+        new Declaration('b', ['root']),
+        new Declaration('a', ['root', Symbol('anonymous').toString()])
+      ],
+      references: [
+        new Reference('call', ['root']),
+        new Reference('b', ['root', Symbol('anonymous').toString()])
+      ]
+    })
   })
 })

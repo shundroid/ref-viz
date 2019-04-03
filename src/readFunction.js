@@ -24,10 +24,8 @@ function readFunction(belongs, fn) {
                 break
               case 'ArrowFunctionExpression':
               case 'FunctionExpression':
-                readExpressions.FunctionExpression(declarator.init, [
-                  ...belongs,
-                  declarator.id.name
-                ], references, declarations)
+                readExpressions.FunctionExpression(declarator.init, belongs,
+                  references, declarations, declarator.id.name)
                 break
               default:
                 if (readExpressions[declarator.init.type]) {
@@ -39,15 +37,13 @@ function readFunction(belongs, fn) {
         }
         break
       case 'FunctionDeclaration':
-        readExpressions.FunctionExpression(node, [
-          ...belongs,
-          node.id.name
-        ], references, declarations)
+        readExpressions.FunctionExpression(node, belongs,
+            references, declarations, node.id.name)
         declarations.push(new Declaration(node.id.name, belongs))
         break
       case 'ExpressionStatement':
         if (readExpressions[node.expression.type]) {
-          readExpressions[node.expression.type](node.expression, belongs, references)
+          readExpressions[node.expression.type](node.expression, belongs, references, declarations)
         }
         break
       case 'IfStatement':
@@ -79,10 +75,8 @@ function readObject(belongs, objectExpression) {
         break
       case 'ArrowFunctionExpression':
       case 'FunctionExpression':
-        readExpressions.FunctionExpression(property.value, [
-          ...belongs,
-          property.key.name
-        ], references, declarations)
+        readExpressions.FunctionExpression(property.value, belongs,
+          references, declarations, property.key.name)
         break
       default:
         if (readExpressions[property.value.type]) {
@@ -143,12 +137,32 @@ const readExpressions = {
     r.push(...obj.references)
   },
   // function() {}
-  FunctionExpression(expression, belongs, r, d) {
-    const fn = readFunction(belongs, expression.body)
+  FunctionExpression(expression, belongs, r, d, functionName = null) {
+    if (functionName === null) {
+      functionName = Symbol('anonymous')
+    }
+    // On used functionExpression, we should change belongs,
+    // but whether declaring functionName or not is optional.
+    const fn = readFunction([
+      ...belongs,
+      functionName
+    ], expression.body)
     d.push(...fn.declarations)
     r.push(...fn.references)
   },
   ArrowFunctionExpression(expression, belongs, r, d) {
     readExpressions.FunctionExpression(expression, belongs, r, d)
+  },
+  // [a, b, ...]
+  ArrayExpression(expression, belongs, r, d) {
+    for (let element of expression.elements) {
+      if (readExpressions[element.type]) {
+        readExpressions[element.type](element, belongs, r, d)
+      }
+    }
+  },
+  // ...a
+  SpreadElement(expression, belongs, r, d) {
+    r.push(new Reference(expression.argument.name, belongs))
   }
 }
