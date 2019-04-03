@@ -1,7 +1,6 @@
 class Reference {
-  constructor(referenceName, belongs) {
+  constructor(referenceName) {
     this.referenceName = referenceName
-    this.belongs = belongs
   }
 }
 

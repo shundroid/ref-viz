@@ -1,7 +1,6 @@
 class Declaration {
-  constructor(variableName, belongs) {
+  constructor(variableName) {
     this.variableName = variableName
-    this.belongs = belongs
   }
 }
 

@@ -3,7 +3,7 @@ const acorn = require('acorn')
 const readFunction = require('../src/readFunction')
 const Declaration = require('../src/lib/declaration')
 const Reference = require('../src/lib/reference')
-const convert = require('../src/lib/symbolForTest')
+const anonymous = require('../src/lib/anonymous')
 
 describe('readFunction', () => {
   it('should make variable declarations', () => {
@@ -12,11 +12,14 @@ describe('readFunction', () => {
     let a2 = 10
     const b = 'hoge'
     `)
-    assert.deepEqual(readFunction(['root'], code).declarations, [
-      new Declaration('a', ['root']),
-      new Declaration('a2', ['root']),
-      new Declaration('b', ['root'])
-    ])
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Declaration('a'),
+        new Declaration('a2'),
+        new Declaration('b')
+      ],
+      scopes: {}
+    })
   })
   it('should make object declarations', () => {
     const code = acorn.Parser.parse(`
@@ -30,11 +33,33 @@ describe('readFunction', () => {
       }
     }
     `)
-    assert.deepEqual(readFunction(['root'], code).declarations, [
-      new Declaration('obj1', ['root']),
-      new Declaration('a', ['root', 'obj1']),
-      new Declaration('b', ['root', 'obj1']),
-    ])
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Declaration('obj1')
+      ],
+      scopes: {
+        obj1: {
+          items: [
+            new Declaration('a'),
+            new Declaration('b'),
+          ],
+          scopes: {
+            a: {
+              items: [
+                new Reference('a')
+              ],
+              scopes: {}
+            },
+            b: {
+              items: [
+                new Reference('a2')
+              ],
+              scopes: {}
+            }
+          }
+        }
+      }
+    })
   })
   it('should make function declarations', () => {
     const code = acorn.Parser.parse(`
@@ -50,11 +75,33 @@ describe('readFunction', () => {
       obj1.b = ''
     }
     `)
-    assert.deepEqual(readFunction(['root'], code).declarations, [
-      new Declaration('fn1', ['root']),
-      new Declaration('fn2', ['root']),
-      new Declaration('fn3', ['root'])
-    ])
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Declaration('fn1'),
+        new Declaration('fn2'),
+        new Declaration('fn3')
+      ],
+      scopes: {
+        fn1: {
+          items: [new Reference('a2')],
+          scopes: {}
+        },
+        fn2: {
+          items: [
+            new Reference('a2'),
+            new Reference('b')
+          ],
+          scopes: {}
+        },
+        fn3: {
+          items: [
+            new Reference('obj1.a'),
+            new Reference('obj1.b')
+          ],
+          scopes: {}
+        }
+      }
+    })
   })
   it('should make references', () => {
     const code = acorn.Parser.parse(`
@@ -71,16 +118,39 @@ describe('readFunction', () => {
       obj1.fn()
     }
     `)
-    assert.deepEqual(readFunction(['root'], code).references, [
-      new Reference('a', ['root', 'obj1', 'a']),
-      new Reference('b', ['root', 'obj1', 'a']),
-      new Reference('c', ['root', 'obj1', 'a']),
-      new Reference('fn', ['root', 'obj1', 'a']),
-      new Reference('a', ['root', 'a']),
-      new Reference('b', ['root', 'a']),
-      new Reference('c', ['root', 'a']),
-      new Reference('obj1.fn', ['root', 'a'])
-    ])
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Declaration('obj1'),
+        new Declaration('a')
+      ],
+      scopes: {
+        obj1: {
+          items: [
+            new Declaration('a')
+          ],
+          scopes: {
+            a: {
+              items: [
+                new Reference('a'),
+                new Reference('b'),
+                new Reference('c'),
+                new Reference('fn')
+              ],
+              scopes: {}
+            }
+          }
+        },
+        a: {
+          items: [
+            new Reference('a'),
+            new Reference('b'),
+            new Reference('c'),
+            new Reference('obj1.fn')
+          ],
+          scopes: {}
+        }
+      }
+    })
   })
   it('should support if statements', () => {
     const code = acorn.Parser.parse(`
@@ -90,33 +160,31 @@ describe('readFunction', () => {
       b += "fuga"
     }
     `)
-    assert.deepEqual(readFunction(['root'], code), {
-      declarations: [
-        new Declaration('a', ['root']),
-        new Declaration('b', ['root'])
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Declaration('a'),
+        new Reference('a'),
+        new Declaration('b'),
+        new Reference('a'),
+        new Reference('c'),
+        new Reference('b'),
       ],
-      references: [
-        new Reference('a', ['root']),
-        new Reference('a', ['root']),
-        new Reference('c', ['root']),
-        new Reference('b', ['root'])
-      ]
+      scopes: {}
     })
   })
   it('should support for array', () => {
     const code = acorn.Parser.parse(`
     const array = [a,b,c,10,...d]
     `)
-    assert.deepEqual(readFunction(['root'], code), {
-      declarations: [
-        new Declaration('array', ['root'])
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Declaration('array'),
+        new Reference('a'),
+        new Reference('b'),
+        new Reference('c'),
+        new Reference('d')
       ],
-      references: [
-        new Reference('a', ['root']),
-        new Reference('b', ['root']),
-        new Reference('c', ['root']),
-        new Reference('d', ['root'])
-      ]
+      scopes: {}
     })
   })
   it('should run deepEqual correctly in comparing Symbols', () => {
@@ -131,19 +199,20 @@ describe('readFunction', () => {
       const a = b
     })
     `)
-    const result = readFunction(['root'], code)
-    convert(result.declarations)
-    convert(result.references)
-    assert.deepEqual(result, {
-      declarations: [
-        new Declaration('a', ['root']),
-        new Declaration('b', ['root']),
-        new Declaration('a', ['root', Symbol('anonymous').toString()])
+    const expectedResult = {
+      items: [
+        new Declaration('a'),
+        new Declaration('b'),
+        new Reference('call')
       ],
-      references: [
-        new Reference('call', ['root']),
-        new Reference('b', ['root', Symbol('anonymous').toString()])
+      scopes: {}
+    }
+    expectedResult[anonymous] = {
+      items: [
+        new Declaration('a'),
+        new Reference('b')
       ]
-    })
+    }
+    assert.deepEqual(readFunction([], code), expectedResult)
   })
 })
