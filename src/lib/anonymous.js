@@ -1,1 +1,1 @@
-module.exports = Symbol('anonymous')
+module.exports = 'anonymous'

@@ -80,11 +80,16 @@ const readNodes = {
     }
   },
   IfStatement(node, belongs, result) {
+    // console.log(node)
     if (readExpressions[node.test.type]) {
       readExpressions[node.test.type](node.test, belongs, result)
     }
-    const fn = readFunction(belongs, node.consequent)
-    result.merge(fn)
+    if (readNodes[node.consequent.type]) {
+      readNodes[node.consequent.type](node.consequent, belongs, result)
+    }
+    if (node.alternate && readNodes[node.alternate.type]) {
+      readNodes[node.alternate.type](node.alternate, belongs, result)
+    }
   },
   ForStatement(node, belongs, result) {
     if (node.init && readNodes[node.init.type]) {
@@ -96,8 +101,9 @@ const readNodes = {
     if (node.update && readExpressions[node.update.type]) {
       readExpressions[node.update.type](node.update, belongs, result)
     }
-    const fn = readFunction(belongs, node.body)
-    result.merge(fn)
+    if (readNodes[node.body.type]) {
+      readNodes[node.body.type](node.body, belongs, result)
+    }
   },
   ForOfStatement(node, belongs, result) {
     if (readNodes[node.left.type]) {
@@ -106,8 +112,9 @@ const readNodes = {
     if (readExpressions[node.right.type]) {
       readExpressions[node.right.type](node.right, belongs, result)
     }
-    const fn = readFunction(belongs, node.body)
-    result.merge(fn)
+    if (readNodes[node.body.type]) {
+      readNodes[node.body.type](node.body, belongs, result)
+    }
   },
   ForInStatement(node, belongs, result) {
     readNodes.ForOfStatement(node, belongs, result)
@@ -116,11 +123,16 @@ const readNodes = {
     if (readExpressions[node.test.type]) {
       readExpressions[node.test.type](node.test, belongs, result)
     }
-    const fn = readFunction(belongs, node.body)
-    result.merge(fn)
+    if (readNodes[node.body.type]) {
+      readNodes[node.body.type](node.body, belongs, result)
+    }
   },
   DoWhileStatement(node, belongs, result) {
     readNodes.WhileStatement(node, belongs, result)
+  },
+  BlockStatement(node, belongs, result) {
+    const fn = readFunction(belongs, node)
+    result.merge(fn)
   }
 }
 

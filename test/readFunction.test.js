@@ -158,6 +158,8 @@ describe('readFunction', () => {
     if (a === "hoge") {
       let b = a + c
       b += "fuga"
+    } else if (b) ;
+    else {
     }
     `)
     assert.deepEqual(readFunction([], code), {
@@ -168,6 +170,7 @@ describe('readFunction', () => {
         new Reference('a'),
         new Reference('c'),
         new Reference('b'),
+        new Reference('b')
       ],
       scopes: {}
     })
@@ -209,7 +212,8 @@ describe('readFunction', () => {
       ],
       scopes: {}
     }
-    expectedResult[anonymous] = {
+    expectedResult.scopes[anonymous] = {
+      scopes: {},
       items: [
         new Declaration('a'),
         new Reference('b')
@@ -299,5 +303,24 @@ describe('readFunction', () => {
       ],
       scopes: {}
     })
+  })
+  it('should support immediate function', () => {
+    const code = acorn.Parser.parse(`
+    !function() { a() }();
+    (function() { b() })()
+    `)
+    const expectedResult = {
+      items: [],
+      scopes: {}
+    }
+    expectedResult.scopes[anonymous] = {
+      items: [
+        new Reference('a'),
+        new Reference('b')
+      ],
+      scopes: {}
+    }
+    assert.deepEqual(readFunction([], code), expectedResult)
+
   })
 })
