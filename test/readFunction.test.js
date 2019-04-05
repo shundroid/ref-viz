@@ -175,6 +175,7 @@ describe('readFunction', () => {
   it('should support for array', () => {
     const code = acorn.Parser.parse(`
     const array = [a,b,c,10,...d]
+    array[0] = 1
     `)
     assert.deepEqual(readFunction([], code), {
       items: [
@@ -182,7 +183,8 @@ describe('readFunction', () => {
         new Reference('a'),
         new Reference('b'),
         new Reference('c'),
-        new Reference('d')
+        new Reference('d'),
+        new Reference('array')
       ],
       scopes: {}
     })
@@ -214,5 +216,88 @@ describe('readFunction', () => {
       ]
     }
     assert.deepEqual(readFunction([], code), expectedResult)
+  })
+  it('should support for statements', () => {
+    const code = acorn.Parser.parse(`
+    for (let i = 0; i < 10; i++) {
+      i++
+    }
+    let j = 0
+    for (;;j++) {
+      j++
+    }
+    `)
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Declaration('i'),
+        new Reference('i'),
+        new Reference('i'),
+        new Reference('i'),
+        new Declaration('j'),
+        new Reference('j'),
+        new Reference('j')
+      ],
+      scopes: {}
+    })
+  })
+  it('should support for-of statements', () => {
+    const code = acorn.Parser.parse(`
+    for (let item of array) {
+      item += '!'
+    }
+    `)
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Declaration('item'),
+        new Reference('array'),
+        new Reference('item')
+      ],
+      scopes: {}
+    })
+  })
+  it('should support for-in statements', () => {
+    const code = acorn.Parser.parse(`
+    for (let item in array) {
+      item += '!'
+    }
+    `)
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Declaration('item'),
+        new Reference('array'),
+        new Reference('item')
+      ],
+      scopes: {}
+    })
+  })
+  it('should support while statements', () => {
+    const code = acorn.Parser.parse(`
+    while (true) {}
+    while (i === 10) {
+      i++
+    }
+    `)
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Reference('i'),
+        new Reference('i')
+      ],
+      scopes: {}
+    })
+  })
+  it('should support do-while statements', () => {
+    const code = acorn.Parser.parse(`
+    do {} while (true)
+    do {
+      i++
+    } while (i === 10)
+    `)
+    assert.deepEqual(readFunction([], code), {
+      items: [
+        new Reference('i'),
+        new Reference('i')
+      ],
+      scopes: {}
+    })
   })
 })

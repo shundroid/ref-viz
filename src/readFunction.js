@@ -9,53 +9,8 @@ const anonymous = require('./lib/anonymous')
 function readFunction(belongs, fn) {
   const result = new Scope()
   for (let node of fn.body) {
-    switch (node.type) {
-      case 'VariableDeclaration':
-        for (let declarator of node.declarations) {
-          if (declarator.type === 'VariableDeclarator') {
-            result.addTo(belongs, new Declaration(declarator.id.name))
-          }
-          if (declarator.init) {
-            switch (declarator.init.type) {
-              case 'ObjectExpression':
-                readExpressions.ObjectExpression(declarator.init, [
-                  ...belongs,
-                  declarator.id.name
-                ], result)
-                break
-              case 'ArrowFunctionExpression':
-              case 'FunctionExpression':
-                readExpressions.FunctionExpression(declarator.init, belongs,
-                  result, declarator.id.name)
-                break
-              default:
-                if (readExpressions[declarator.init.type]) {
-                  readExpressions[declarator.init.type](declarator.init, belongs, result)
-                }
-                break
-            }
-          }
-        }
-        break
-      case 'FunctionDeclaration':
-        readExpressions.FunctionExpression(node, belongs,
-            result, node.id.name)
-        result.addTo(belongs, new Declaration(node.id.name))
-        break
-      case 'ExpressionStatement':
-        if (readExpressions[node.expression.type]) {
-          readExpressions[node.expression.type](node.expression, belongs, result)
-        }
-        break
-      case 'IfStatement':
-        if (readExpressions[node.test.type]) {
-          readExpressions[node.test.type](node.test, belongs, result)
-        }
-        const fn2 = readFunction(belongs, node.consequent)
-        result.merge(fn2)
-        break
-      case 'ForStatement':
-        break
+    if (readNodes[node.type]) {
+      readNodes[node.type](node, belongs, result)
     }
   }
   return result
@@ -86,6 +41,89 @@ function readObject(belongs, objectExpression) {
   return result
 }
 
+const readNodes = {
+  VariableDeclaration(node, belongs, result) {
+    for (let declarator of node.declarations) {
+      if (declarator.type === 'VariableDeclarator') {
+        result.addTo(belongs, new Declaration(declarator.id.name))
+      }
+      if (declarator.init) {
+        switch (declarator.init.type) {
+          case 'ObjectExpression':
+            readExpressions.ObjectExpression(declarator.init, [
+              ...belongs,
+              declarator.id.name
+            ], result)
+            break
+          case 'ArrowFunctionExpression':
+          case 'FunctionExpression':
+            readExpressions.FunctionExpression(declarator.init, belongs,
+              result, declarator.id.name)
+            break
+          default:
+            if (readExpressions[declarator.init.type]) {
+              readExpressions[declarator.init.type](declarator.init, belongs, result)
+            }
+            break
+        }
+      }
+    }
+  },
+  FunctionDeclaration(node, belongs, result) {
+    readExpressions.FunctionExpression(node, belongs,
+        result, node.id.name)
+    result.addTo(belongs, new Declaration(node.id.name))
+  },
+  ExpressionStatement(node, belongs, result) {
+    if (readExpressions[node.expression.type]) {
+      readExpressions[node.expression.type](node.expression, belongs, result)
+    }
+  },
+  IfStatement(node, belongs, result) {
+    if (readExpressions[node.test.type]) {
+      readExpressions[node.test.type](node.test, belongs, result)
+    }
+    const fn = readFunction(belongs, node.consequent)
+    result.merge(fn)
+  },
+  ForStatement(node, belongs, result) {
+    if (node.init && readNodes[node.init.type]) {
+      readNodes[node.init.type](node.init, belongs, result)
+    }
+    if (node.test && readExpressions[node.test.type]) {
+      readExpressions[node.test.type](node.test, belongs, result)
+    }
+    if (node.update && readExpressions[node.update.type]) {
+      readExpressions[node.update.type](node.update, belongs, result)
+    }
+    const fn = readFunction(belongs, node.body)
+    result.merge(fn)
+  },
+  ForOfStatement(node, belongs, result) {
+    if (readNodes[node.left.type]) {
+      readNodes[node.left.type](node.left, belongs, result)
+    }
+    if (readExpressions[node.right.type]) {
+      readExpressions[node.right.type](node.right, belongs, result)
+    }
+    const fn = readFunction(belongs, node.body)
+    result.merge(fn)
+  },
+  ForInStatement(node, belongs, result) {
+    readNodes.ForOfStatement(node, belongs, result)
+  },
+  WhileStatement(node, belongs, result) {
+    if (readExpressions[node.test.type]) {
+      readExpressions[node.test.type](node.test, belongs, result)
+    }
+    const fn = readFunction(belongs, node.body)
+    result.merge(fn)
+  },
+  DoWhileStatement(node, belongs, result) {
+    readNodes.WhileStatement(node, belongs, result)
+  }
+}
+
 const readExpressions = {
   // a, b, ...
   Identifier(expression, belongs, result) {
@@ -93,7 +131,11 @@ const readExpressions = {
   },
   // a.b, c.d, ...
   MemberExpression(expression, belongs, result) {
-    result.addTo(belongs, new Reference(toStringMemberExpression(expression)))
+    const memberExp = toStringMemberExpression(expression)
+    result.addTo(belongs, new Reference(memberExp.members.join('.')))
+    for (let reference of memberExp.references) {
+      result.addTo(belongs, reference)
+    }
   },
   // a = 0, b = c, ...
   AssignmentExpression(expression, belongs, result) {
@@ -157,6 +199,10 @@ const readExpressions = {
   },
   // ...a
   SpreadElement(expression, belongs, result) {
+    result.addTo(belongs, new Reference(expression.argument.name))
+  },
+  // i++, --j
+  UpdateExpression(expression, belongs, result) {
     result.addTo(belongs, new Reference(expression.argument.name))
   }
 }
