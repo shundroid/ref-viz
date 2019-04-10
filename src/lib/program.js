@@ -1,8 +1,7 @@
 class Program {
-  constructor(filePath, declarations, references) {
+  constructor(filePath, scope) {
     this.filePath = filePath
-    this.declarations = declarations
-    this.references = references
+    this.scope = scope
   }
 }
 
