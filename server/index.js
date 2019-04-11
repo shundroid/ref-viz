@@ -2,6 +2,7 @@ const acorn = require('acorn')
 const fs = require('fs')
 
 const readProgram = require('./src/readProgram')
+const updateServerData = require('./src/serve')
 
 const programs = []
 
@@ -14,4 +15,5 @@ fs.readFile(entryFile, (err, data) => {
   }
   const program = readProgram(entryFile, acorn.Parser.parse(data.toString()))
   console.log(JSON.stringify(program))
+  updateServerData(program)
 })
