@@ -2,8 +2,10 @@
   <section>
     {{ scopeName }}
     <div v-if="scope && scope.scopes">
-      <Scope v-for="key in declarationKeys" :scope="null" :key="key" :scopeName="key" />
-      <Scope v-for="key in keys" :key="key" :scope="scope ? scope.scopes[key] : null" :scopeName="key" />
+      <template v-for="key in keys">
+        <Scope v-if="key !== 'br'" :key="key" :scope="scope ? scope.scopes[key] : null" :scopeName="key" />
+        <br v-if="key === 'br'" :key="key">
+      </template>
     </div>
   </section>
 </template>
@@ -16,18 +18,31 @@ export default {
     scopeName: String
   },
   computed: {
-    keys() {
+    scopeKeys() {
       return this.scope ? Object.keys(this.scope.scopes) : []
     },
     declarationKeys() {
       if (this.scope) {
         return this.scope.items.filter(item => {
-          return item.variableName && this.keys.indexOf(item.variableName) === -1
+          return item.variableName && this.scopeKeys.indexOf(item.variableName) === -1
         }).map(item => {
           return item.variableName
         })
       }
       return []
+    },
+    keys() {
+      return this.scopeKeys.concat(this.declarationKeys)
+    },
+    columnCount() {
+      return Math.floor(Math.sqrt(this.keys.length))
+    },
+    renderKeys() {
+      const result = this.key.slice(0)
+      for (let i = 1; i * this.columnCount < this.keys.length; i++) {
+        result.splice(i * this.columnCount + i - 1, 0, 'br')
+      }
+      return result
     }
   }
 }
@@ -35,7 +50,7 @@ export default {
 
 <style scoped>
 section {
-  background-color: rgba(0, 0, 0, 0.1);
+  border: 1px solid black;
   padding: 10px;
   margin: 10px;
 }
