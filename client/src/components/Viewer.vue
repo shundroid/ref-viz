@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <Scope v-if="scope" :scope="scope" scopeName="root" />
+  <div :style="{ width: `${size}px`, height: `${size}px` }">
+    <Scope v-if="scope" :scope="scope" scopeName="root" :size="size" :margin="0" />
   </div>
 </template>
 
@@ -14,13 +14,23 @@ export default {
   },
   data() {
     return {
-      scope: null
+      scope: null,
+      size: Math.max(window.innerWidth, window.innerHeight)
     }
   },
   mounted() {
     axios.get('http://localhost:8081').then(data => {
       this.scope = data.data.scope
     })
+    window.addEventListener('resize', () => {
+      this.size = Math.max(window.innerWidth, window.innerHeight)
+    })
   }
 }
 </script>
+
+<style scoped>
+div {
+  box-sizing: border-box;
+}
+</style>
