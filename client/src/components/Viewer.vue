@@ -5,8 +5,15 @@
     width: `${computedSize}px`,
     height: `${computedSize}px`
    }">
+    <svg style="position: absolute">
+      <defs>
+        <marker id="mu_mh" markerUnits="strokeWidth" markerWidth="5" markerHeight="5" viewBox="0 0 10 10" refX="7" refY="5.5">
+          <polygon points="0,0 0,10 10,5.5" fill="black"/>
+        </marker>
+      </defs>
+    </svg>
     <Scope v-if="scope" :scope="scope" scopeName="root" :size="computedSize" :margin="0" />
-    <Reference />
+    <Reference :x1="200" :y1="400" :x2="100" :y2="50" />
   </div>
 </template>
 
