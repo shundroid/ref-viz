@@ -1,8 +1,8 @@
 <template>
   <section :style="{ width: `${size - margin * 2}px`, height: `${size - margin * 2}px`, margin: `${margin}px` }">
     <span>{{ scopeName }}</span>
-    <template v-if="scope && scope.scopes">
-      <Scope v-for="key in keys" :key="key" :scope="scope ? scope.scopes[key] : null" :scopeName="key" :size="childSize" :margin="10" />
+    <template v-if="childSize > 20 && scope && scope.scopes">
+      <Scope v-for="key in keys" :key="key" :scope="scope ? scope.scopes[key] : null" :scopeName="key" :size="childSize" :margin="20" />
     </template>
   </section>
 </template>
@@ -56,5 +56,8 @@ span {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 </style>
