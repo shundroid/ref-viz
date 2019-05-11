@@ -12,8 +12,13 @@
         </marker>
       </defs>
     </svg>
-    <Scope v-if="scope" :scope="scope" scopeName="root" :size="computedSize" :margin="0" />
-    <Reference :x1="200" :y1="400" :x2="100" :y2="50" />
+    <Scope
+      v-if="scope"
+      :scope="scope"
+      scopeName="root"
+      location="root"
+      :size="computedSize"
+      :margin="0" />
   </div>
 </template>
 
@@ -27,8 +32,7 @@ const minZoom = 0.01
 
 export default {
   components: {
-    Scope,
-    Reference
+    Scope
   },
   data() {
     return {

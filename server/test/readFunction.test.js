@@ -12,13 +12,13 @@ describe('readFunction', () => {
     let a2 = 10
     const b = 'hoge'
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
         new Declaration('a'),
         new Declaration('a2'),
         new Declaration('b')
-      ],
-      scopes: {}
+      ]
     })
   })
   it('should make object declarations', () => {
@@ -33,32 +33,27 @@ describe('readFunction', () => {
       }
     }
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
-        new Declaration('obj1')
-      ],
-      scopes: {
-        obj1: {
+        {
+          scopeName: 'obj1',
           items: [
-            new Declaration('a'),
-            new Declaration('b'),
-          ],
-          scopes: {
-            a: {
+            {
+              scopeName: 'a',
               items: [
                 new Reference('a')
-              ],
-              scopes: {}
+              ]
             },
-            b: {
+            {
+              scopeName: 'b',
               items: [
                 new Reference('a2')
-              ],
-              scopes: {}
+              ]
             }
-          }
+          ]
         }
-      }
+      ]
     })
   })
   it('should make function declarations', () => {
@@ -75,32 +70,28 @@ describe('readFunction', () => {
       obj1.b = ''
     }
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
-        new Declaration('fn1'),
-        new Declaration('fn2'),
-        new Declaration('fn3')
-      ],
-      scopes: {
-        fn1: {
-          items: [new Reference('a2')],
-          scopes: {}
+        {
+          scopeName: 'fn1',
+          items: [new Reference('a2')]
         },
-        fn2: {
+        {
+          scopeName: 'fn2',
           items: [
             new Reference('a2'),
             new Reference('b')
-          ],
-          scopes: {}
+          ]
         },
-        fn3: {
+        {
+          scopeName: 'fn3',
           items: [
             new Reference('obj1.a'),
             new Reference('obj1.b')
-          ],
-          scopes: {}
+          ]
         }
-      }
+      ]
     })
   })
   it('should make references', () => {
@@ -118,38 +109,33 @@ describe('readFunction', () => {
       obj1.fn()
     }
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
-        new Declaration('obj1'),
-        new Declaration('a')
-      ],
-      scopes: {
-        obj1: {
+        {
+          scopeName: 'obj1',
           items: [
-            new Declaration('a')
-          ],
-          scopes: {
-            a: {
+            {
+              scopeName: 'a',
               items: [
                 new Reference('a'),
                 new Reference('b'),
                 new Reference('c'),
                 new Reference('fn')
-              ],
-              scopes: {}
+              ]
             }
-          }
+          ]
         },
-        a: {
+        {
+          scopeName: 'a',
           items: [
             new Reference('a'),
             new Reference('b'),
             new Reference('c'),
             new Reference('obj1.fn')
-          ],
-          scopes: {}
+          ]
         }
-      }
+      ]
     })
   })
   it('should support if statements', () => {
@@ -162,7 +148,8 @@ describe('readFunction', () => {
     else {
     }
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
         new Declaration('a'),
         new Reference('a'),
@@ -171,8 +158,7 @@ describe('readFunction', () => {
         new Reference('c'),
         new Reference('b'),
         new Reference('b')
-      ],
-      scopes: {}
+      ]
     })
   })
   it('should support for array', () => {
@@ -180,7 +166,8 @@ describe('readFunction', () => {
     const array = [a,b,c,10,...d]
     array[0] = 1
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
         new Declaration('array'),
         new Reference('a'),
@@ -188,8 +175,7 @@ describe('readFunction', () => {
         new Reference('c'),
         new Reference('d'),
         new Reference('array')
-      ],
-      scopes: {}
+      ]
     })
   })
   it('should run deepEqual correctly in comparing Symbols', () => {
@@ -205,21 +191,21 @@ describe('readFunction', () => {
     })
     `)
     const expectedResult = {
+      scopeName: void 0,
       items: [
         new Declaration('a'),
         new Declaration('b'),
-        new Reference('call')
-      ],
-      scopes: {}
-    }
-    expectedResult.scopes[anonymous] = {
-      scopes: {},
-      items: [
-        new Declaration('a'),
-        new Reference('b')
+        new Reference('call'),
+        {
+          scopeName: anonymous,
+          items: [
+            new Declaration('a'),
+            new Reference('b')
+          ]
+        }
       ]
     }
-    assert.deepEqual(readFunction([], code), expectedResult)
+    assert.deepEqual(readFunction(code), expectedResult)
   })
   it('should support for statements', () => {
     const code = acorn.Parser.parse(`
@@ -231,7 +217,8 @@ describe('readFunction', () => {
       j++
     }
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
         new Declaration('i'),
         new Reference('i'),
@@ -240,8 +227,7 @@ describe('readFunction', () => {
         new Declaration('j'),
         new Reference('j'),
         new Reference('j')
-      ],
-      scopes: {}
+      ]
     })
   })
   it('should support for-of statements', () => {
@@ -250,13 +236,13 @@ describe('readFunction', () => {
       item += '!'
     }
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
         new Declaration('item'),
         new Reference('array'),
         new Reference('item')
-      ],
-      scopes: {}
+      ]
     })
   })
   it('should support for-in statements', () => {
@@ -265,13 +251,13 @@ describe('readFunction', () => {
       item += '!'
     }
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
         new Declaration('item'),
         new Reference('array'),
         new Reference('item')
-      ],
-      scopes: {}
+      ]
     })
   })
   it('should support while statements', () => {
@@ -281,12 +267,12 @@ describe('readFunction', () => {
       i++
     }
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
         new Reference('i'),
         new Reference('i')
-      ],
-      scopes: {}
+      ]
     })
   })
   it('should support do-while statements', () => {
@@ -296,12 +282,12 @@ describe('readFunction', () => {
       i++
     } while (i === 10)
     `)
-    assert.deepEqual(readFunction([], code), {
+    assert.deepEqual(readFunction(code), {
+      scopeName: void 0,
       items: [
         new Reference('i'),
         new Reference('i')
-      ],
-      scopes: {}
+      ]
     })
   })
   it('should support immediate function', () => {
@@ -310,17 +296,22 @@ describe('readFunction', () => {
     (function() { b() })()
     `)
     const expectedResult = {
-      items: [],
-      scopes: {}
-    }
-    expectedResult.scopes[anonymous] = {
+      scopeName: void 0,
       items: [
-        new Reference('a'),
-        new Reference('b')
-      ],
-      scopes: {}
+        {
+          scopeName: anonymous,
+          items: [
+            new Reference('a')
+          ]
+        },
+        {
+          scopeName: anonymous,
+          items: [
+            new Reference('b')
+          ]
+        }
+      ]
     }
-    assert.deepEqual(readFunction([], code), expectedResult)
-
+    assert.deepEqual(readFunction(code), expectedResult)
   })
 })

@@ -6,35 +6,31 @@ const Scope = require('./lib/scope')
 const toStringMemberExpression = require('./toStringMemberExpression')
 const anonymous = require('./lib/anonymous')
 
-function readFunction(belongs, fn) {
-  const result = new Scope()
+function readFunction(fn, functionName) {
+  const result = new Scope(functionName)
   for (let node of fn.body) {
     if (readNodes[node.type]) {
-      readNodes[node.type](node, belongs, result)
+      readNodes[node.type](node, result)
     }
   }
   return result
 }
 
-function readObject(belongs, objectExpression) {
-  const result = new Scope()
+function readObject(objectExpression, objectName) {
+  const result = new Scope(objectName)
   for (let property of objectExpression.properties) {
-    result.addTo(belongs, new Declaration(property.key.name))
     switch (property.value.type) {
       case 'ObjectExpression':
-        readExpressions.ObjectExpression(property.value, [
-          ...belongs,
-          property.key.name
-        ], result)
+        readExpressions.ObjectExpression(property.value, result, property.key.name)
         break
       case 'ArrowFunctionExpression':
       case 'FunctionExpression':
-        readExpressions.FunctionExpression(property.value, belongs,
-          result, property.key.name)
+        readExpressions.FunctionExpression(property.value, result, property.key.name)
         break
       default:
+        result.add(new Declaration(property.key.name))
         if (readExpressions[property.value.type]) {
-          readExpressions[property.value.type](property.value, belongs, result)
+          readExpressions[property.value.type](property.value, result)
         }
     }
   }
@@ -42,179 +38,174 @@ function readObject(belongs, objectExpression) {
 }
 
 const readNodes = {
-  VariableDeclaration(node, belongs, result) {
+  VariableDeclaration(node, result) {
     for (let declarator of node.declarations) {
-      if (declarator.type === 'VariableDeclarator') {
-        result.addTo(belongs, new Declaration(declarator.id.name))
-      }
       if (declarator.init) {
         switch (declarator.init.type) {
           case 'ObjectExpression':
-            readExpressions.ObjectExpression(declarator.init, [
-              ...belongs,
-              declarator.id.name
-            ], result)
+            readExpressions.ObjectExpression(declarator.init, result, declarator.id.name)
             break
           case 'ArrowFunctionExpression':
           case 'FunctionExpression':
-            readExpressions.FunctionExpression(declarator.init, belongs,
-              result, declarator.id.name)
+            readExpressions.FunctionExpression(declarator.init, result, declarator.id.name)
             break
           default:
+            result.add(new Declaration(declarator.id.name))
             if (readExpressions[declarator.init.type]) {
-              readExpressions[declarator.init.type](declarator.init, belongs, result)
+              readExpressions[declarator.init.type](declarator.init, result)
             }
             break
+        }
+      } else {
+        if (declarator.type === 'VariableDeclarator') {
+          result.add(new Declaration(declarator.id.name))
         }
       }
     }
   },
-  FunctionDeclaration(node, belongs, result) {
-    readExpressions.FunctionExpression(node, belongs,
+  FunctionDeclaration(node, result) {
+    readExpressions.FunctionExpression(node,
         result, node.id.name)
-    result.addTo(belongs, new Declaration(node.id.name))
+    // result.add(new Declaration(node.id.name))
   },
-  ExpressionStatement(node, belongs, result) {
+  ExpressionStatement(node, result) {
     if (readExpressions[node.expression.type]) {
-      readExpressions[node.expression.type](node.expression, belongs, result)
+      readExpressions[node.expression.type](node.expression, result)
     }
   },
-  IfStatement(node, belongs, result) {
+  IfStatement(node, result) {
     // console.log(node)
     if (readExpressions[node.test.type]) {
-      readExpressions[node.test.type](node.test, belongs, result)
+      readExpressions[node.test.type](node.test, result)
     }
     if (readNodes[node.consequent.type]) {
-      readNodes[node.consequent.type](node.consequent, belongs, result)
+      readNodes[node.consequent.type](node.consequent, result)
     }
     if (node.alternate && readNodes[node.alternate.type]) {
-      readNodes[node.alternate.type](node.alternate, belongs, result)
+      readNodes[node.alternate.type](node.alternate, result)
     }
   },
-  ForStatement(node, belongs, result) {
+  ForStatement(node, result) {
     if (node.init && readNodes[node.init.type]) {
-      readNodes[node.init.type](node.init, belongs, result)
+      readNodes[node.init.type](node.init, result)
     }
     if (node.test && readExpressions[node.test.type]) {
-      readExpressions[node.test.type](node.test, belongs, result)
+      readExpressions[node.test.type](node.test, result)
     }
     if (node.update && readExpressions[node.update.type]) {
-      readExpressions[node.update.type](node.update, belongs, result)
+      readExpressions[node.update.type](node.update, result)
     }
     if (readNodes[node.body.type]) {
-      readNodes[node.body.type](node.body, belongs, result)
+      readNodes[node.body.type](node.body, result)
     }
   },
-  ForOfStatement(node, belongs, result) {
+  ForOfStatement(node, result) {
     if (readNodes[node.left.type]) {
-      readNodes[node.left.type](node.left, belongs, result)
+      readNodes[node.left.type](node.left, result)
     }
     if (readExpressions[node.right.type]) {
-      readExpressions[node.right.type](node.right, belongs, result)
+      readExpressions[node.right.type](node.right, result)
     }
     if (readNodes[node.body.type]) {
-      readNodes[node.body.type](node.body, belongs, result)
+      readNodes[node.body.type](node.body, result)
     }
   },
-  ForInStatement(node, belongs, result) {
-    readNodes.ForOfStatement(node, belongs, result)
+  ForInStatement(node, result) {
+    readNodes.ForOfStatement(node, result)
   },
-  WhileStatement(node, belongs, result) {
+  WhileStatement(node, result) {
     if (readExpressions[node.test.type]) {
-      readExpressions[node.test.type](node.test, belongs, result)
+      readExpressions[node.test.type](node.test, result)
     }
     if (readNodes[node.body.type]) {
-      readNodes[node.body.type](node.body, belongs, result)
+      readNodes[node.body.type](node.body, result)
     }
   },
-  DoWhileStatement(node, belongs, result) {
-    readNodes.WhileStatement(node, belongs, result)
+  DoWhileStatement(node, result) {
+    readNodes.WhileStatement(node, result)
   },
-  BlockStatement(node, belongs, result) {
-    const fn = readFunction(belongs, node)
-    result.merge(fn)
+  BlockStatement(node, result) {
+    const fn = readFunction(node)
+    result.mergeScope(fn)
   }
 }
 
 const readExpressions = {
   // a, b, ...
-  Identifier(expression, belongs, result) {
-    result.addTo(belongs, new Reference(expression.name))
+  Identifier(expression, result) {
+    result.add(new Reference(expression.name))
   },
   // a.b, c.d, ...
-  MemberExpression(expression, belongs, result) {
+  MemberExpression(expression, result) {
     const memberExp = toStringMemberExpression(expression)
-    result.addTo(belongs, new Reference(memberExp.members.join('.')))
+    result.add(new Reference(memberExp.members.join('.')))
     for (let reference of memberExp.references) {
-      result.addTo(belongs, reference)
+      result.add(reference)
     }
   },
   // a = 0, b = c, ...
-  AssignmentExpression(expression, belongs, result) {
+  AssignmentExpression(expression, result) {
     if (readExpressions[expression.left.type]) {
-      readExpressions[expression.left.type](expression.left, belongs, result)
+      readExpressions[expression.left.type](expression.left, result)
     }
     if (readExpressions[expression.right.type]) {
-      readExpressions[expression.right.type](expression.right, belongs, result)
+      readExpressions[expression.right.type](expression.right, result)
     }
   },
   // a + b, c === d, ...
-  BinaryExpression(expression, belongs, result) {
-    readExpressions.AssignmentExpression(expression, belongs, result)
+  BinaryExpression(expression, result) {
+    readExpressions.AssignmentExpression(expression, result)
   },
   // !a
-  UnaryExpression(expression, belongs, result) {
+  UnaryExpression(expression, result) {
     if (readExpressions[expression.argument.type]) {
-      readExpressions[expression.argument.type](expression.argument, belongs, result)
+      readExpressions[expression.argument.type](expression.argument, result)
     }
   },
   // a(), a.b(100), ...
-  CallExpression(expression, belongs, result) {
+  CallExpression(expression, result) {
     if (readExpressions[expression.callee.type]) {
-      readExpressions[expression.callee.type](expression.callee, belongs, result)
+      readExpressions[expression.callee.type](expression.callee, result)
     }
     for (arg of expression.arguments) {
       if (readExpressions[arg.type]) {
-        readExpressions[arg.type](arg, belongs, result)
+        readExpressions[arg.type](arg, result)
       }
     }
   },
   // { a, b: 'hoge', ... }
   // declarations is only used for VariableDeclaration
-  ObjectExpression(expression, belongs, result) {
-    const obj = readObject(belongs, expression)
-    result.merge(obj)
+  ObjectExpression(expression, result, objectName) {
+    const obj = readObject(expression, objectName)
+    result.add(obj)
   },
   // function() {}
-  FunctionExpression(expression, belongs, result, functionName = null) {
+  FunctionExpression(expression, result, functionName = null) {
     if (functionName === null) {
       functionName = anonymous
     }
     // On used functionExpression, we should change belongs,
     // but whether declaring functionName or not is optional.
-    const fn = readFunction([
-      ...belongs,
-      functionName
-    ], expression.body)
-    result.merge(fn)
+    const fn = readFunction(expression.body, functionName)
+    result.add(fn)
   },
-  ArrowFunctionExpression(expression, belongs, result) {
-    readExpressions.FunctionExpression(expression, belongs, result)
+  ArrowFunctionExpression(expression, result, functionName = null) {
+    readExpressions.FunctionExpression(expression, result, functionName)
   },
   // [a, b, ...]
-  ArrayExpression(expression, belongs, result) {
+  ArrayExpression(expression, result) {
     for (let element of expression.elements) {
       if (readExpressions[element.type]) {
-        readExpressions[element.type](element, belongs, result)
+        readExpressions[element.type](element, result)
       }
     }
   },
   // ...a
-  SpreadElement(expression, belongs, result) {
-    result.addTo(belongs, new Reference(expression.argument.name))
+  SpreadElement(expression, result) {
+    result.add(new Reference(expression.argument.name))
   },
   // i++, --j
-  UpdateExpression(expression, belongs, result) {
-    result.addTo(belongs, new Reference(expression.argument.name))
+  UpdateExpression(expression, result) {
+    result.add(new Reference(expression.argument.name))
   }
 }
