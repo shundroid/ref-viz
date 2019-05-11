@@ -6,7 +6,7 @@ const Scope = require('./lib/scope')
 const toStringMemberExpression = require('./toStringMemberExpression')
 const anonymous = require('./lib/anonymous')
 
-function readFunction(fn, functionName) {
+function readFunction(fn, functionName = null) {
   const result = new Scope(functionName)
   for (let node of fn.body) {
     if (readNodes[node.type]) {
@@ -16,7 +16,7 @@ function readFunction(fn, functionName) {
   return result
 }
 
-function readObject(objectExpression, objectName) {
+function readObject(objectExpression, objectName = null) {
   const result = new Scope(objectName)
   for (let property of objectExpression.properties) {
     switch (property.value.type) {
@@ -66,7 +66,6 @@ const readNodes = {
   FunctionDeclaration(node, result) {
     readExpressions.FunctionExpression(node,
         result, node.id.name)
-    // result.add(new Declaration(node.id.name))
   },
   ExpressionStatement(node, result) {
     if (readExpressions[node.expression.type]) {
@@ -74,7 +73,6 @@ const readNodes = {
     }
   },
   IfStatement(node, result) {
-    // console.log(node)
     if (readExpressions[node.test.type]) {
       readExpressions[node.test.type](node.test, result)
     }
@@ -126,7 +124,7 @@ const readNodes = {
   },
   BlockStatement(node, result) {
     const fn = readFunction(node)
-    result.mergeScope(fn)
+    result.merge(fn)
   }
 }
 
@@ -184,8 +182,6 @@ const readExpressions = {
     if (functionName === null) {
       functionName = anonymous
     }
-    // On used functionExpression, we should change belongs,
-    // but whether declaring functionName or not is optional.
     const fn = readFunction(expression.body, functionName)
     result.add(fn)
   },
