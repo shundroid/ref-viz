@@ -17,8 +17,10 @@
       :scope="scope"
       scopeName="root"
       location="root"
+      :x="left"
+      :y="top"
       :size="computedSize"
-      :margin="0" />
+      :margin="10" />
   </div>
 </template>
 

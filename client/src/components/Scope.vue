@@ -1,31 +1,45 @@
 <template>
-  <section :style="{ width: `${size - margin * 2}px`, height: `${size - margin * 2}px`, margin: `${margin}px` }">
+  <section :style="{
+      width: `${size - margin * 2}px`,
+      height: `${size - margin * 2}px`,
+      top: `${y}px`,
+      left: `${x}px`
+    }">
     <span>{{ scopeName }}</span>
-    <template v-if="childSize - 20 > 20 && scope">
-      <template v-for="(key, index) in keys">
+    <template v-if="childSize - 20 > 20 && scope !== null">
+      <template v-for="(item, index) in scopes">
         <Scope
-          v-if="typeof key === 'string'"
+          v-if="item.scopeName"
           :key="index"
-          :scope="scope ? scope.scopes[key] : null"
-          :scopeName="key"
+          :scope="item"
+          :scopeName="item.scopeName"
+          :x="x + margin + childSize * (index % columnCount)"
+          :y="y + margin * 2 + childSize * Math.floor(index / columnCount)"
           :size="childSize"
-          :margin="20"
+          :margin="10"
+          :scopeId="item.scopeId"
           :location="`${location}.${key}`" />
         <Scope
-          v-if="key.variableName"
+          v-if="item.variableName"
           :key="index"
           :scope="null"
-          :scopeName="key.variableName"
+          :scopeName="item.variableName"
+          :x="x + margin + childSize * (index % columnCount)"
+          :y="y + margin * 2 + childSize * Math.floor(index / columnCount)"
           :size="childSize"
-          :margin="20"
+          :margin="10"
+          :scopeId="item.declarationId"
           :location="location" />
-        <Reference v-if="key.referenceName" :key="index" />
       </template>
+    </template>
+    <template v-if="scope !== null">
+      <Reference v-for="(item, index) in references" :key="index" :reference="item" :x="x" :y="y" />
     </template>
   </section>
 </template>
 
 <script>
+import { mapMutations } from 'vuex'
 import Reference from './Reference'
 
 export default {
@@ -33,33 +47,47 @@ export default {
   props: {
     scope: Object,
     scopeName: String,
+    x: Number,
+    y: Number,
     size: Number,
     margin: Number,
-    location: String
+    location: String,
+    scopeId: Number
   },
   components: {
     Reference
   },
   computed: {
-    scopeKeys() {
-      return this.scope ? Object.keys(this.scope.scopes) : []
+    scopes() {
+      return this.scope.items.filter(item => {
+        return item.scopeName || item.variableName
+      })
     },
-    itemKeys() {
-      return this.scope ? this.scope.items.filter(item => {
-        if (item.referenceName) {
-          return true
-        }
-        return this.scopeKeys.indexOf(item.variableName) === -1
-      }) : []
-    },
-    keys() {
-      return this.itemKeys.concat(this.scopeKeys)
+    references() {
+      return this.scope.items.filter(item => item.referenceName && item.referenceId !== null)
     },
     columnCount() {
-      return Math.ceil(Math.sqrt(this.keys.length))
+      if (this.scope === null) {
+        return 0
+      }
+      return Math.ceil(Math.sqrt(this.scopes.length))
     },
     childSize() {
       return Math.floor((this.size - this.margin * 2 - 2) / this.columnCount)
+    }
+  },
+  methods: {
+    ...mapMutations(['addDeclaration', 'removeDeclaration'])
+  },
+  mounted() {
+    if (this.scopeId) {
+      this.addDeclaration(this)
+    }
+  },
+  beforeDestroy() {
+    console.log(this.scopeId)
+    if (this.scopeId) {
+      this.removeDeclaration(this)
     }
   }
 }
@@ -68,11 +96,11 @@ export default {
 <style scoped>
 section {
   border: 1px solid black;
-  display: flex;
-  flex-wrap: wrap;
+  /* display: flex;
+  flex-wrap: wrap; */
   box-sizing: border-box;
-  flex-direction: column;
-  position: relative;
+  /* flex-direction: column; */
+  position: fixed;
 }
 span {
   position: absolute;
