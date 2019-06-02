@@ -124,6 +124,11 @@ const readNodes = {
   BlockStatement(node, result) {
     const fn = readFunction(node)
     result.merge(fn)
+  },
+  ReturnStatement(node, result) {
+    if (readExpressions[node.argument.type]) {
+      readExpressions[node.argument.type](node.argument, result)
+    }
   }
 }
 
@@ -164,7 +169,7 @@ const readExpressions = {
     if (readExpressions[expression.callee.type]) {
       readExpressions[expression.callee.type](expression.callee, result)
     }
-    for (arg of expression.arguments) {
+    for (let arg of expression.arguments) {
       if (readExpressions[arg.type]) {
         readExpressions[arg.type](arg, result)
       }
@@ -182,6 +187,23 @@ const readExpressions = {
       functionName = anonymous
     }
     const fn = readFunction(expression.body, functionName)
+    for (let element of expression.params) {
+      // this is declaration, not reference
+      switch (element.type) {
+        case 'Identifier':
+          fn.add(new Declaration(element.name))
+          break
+        case 'AssignmentPattern':
+          fn.add(new Declaration(element.left.name))
+          if (readExpressions[element.right.type]) {
+            readExpressions[element.right.type](element.right, fn)
+          }
+          break
+        case 'RestElement':
+          fn.add(new Declaration(element.argument.name))
+          break
+      }
+    }
     result.add(fn)
   },
   ArrowFunctionExpression(expression, result, functionName = null) {
@@ -202,5 +224,14 @@ const readExpressions = {
   // i++, --j
   UpdateExpression(expression, result) {
     result.add(new Reference(expression.argument.name))
+  },
+  // new A()
+  NewExpression(expression, result) {
+    result.add(new Reference(expression.callee.name))
+    for (let element of expression.arguments) {
+      if (readExpressions[element.type]) {
+        readExpressions[element.type](element, result)
+      }
+    }
   }
 }

@@ -239,4 +239,59 @@ describe('readFunction', () => {
       ])
     ]))
   })
+  it('should support new-expression', () => {
+    const code = acorn.Parser.parse(`
+    new A(a, b, 'hoge', c)
+    `)
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Reference('A'),
+      new Reference('a'),
+      new Reference('b'),
+      new Reference('c')
+    ]))
+  })
+  it('should support return reference', () => {
+    const code = acorn.Parser.parse(`
+    function a() {
+      return a1
+    }
+    const b = function() {
+      return b1
+    }
+    const c = () => {
+      return c1
+    }
+    `)
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('a', [
+        new Reference('a1')
+      ]),
+      new Declaration('b', [
+        new Reference('b1')
+      ]),
+      new Declaration('c', [
+        new Reference('c1')
+      ])
+    ]))
+  })
+  it('should support arguments', () => {
+    const code = acorn.Parser.parse(`
+    function a(x) {}
+    const b = function(x) {}
+    const c = x => {}
+    const d = (x, y = num, z = 1, ...w) => {}
+    `)
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('a', [new Declaration('x')]),
+      new Declaration('b', [new Declaration('x')]),
+      new Declaration('c', [new Declaration('x')]),
+      new Declaration('d', [
+        new Declaration('x'),
+        new Declaration('y'),
+        new Reference('num'),
+        new Declaration('z'),
+        new Declaration('w')
+      ]),
+    ]))
+  })
 })
