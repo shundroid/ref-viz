@@ -1,97 +1,45 @@
-/*const assert = require('assert')
-const bindReference = require('../src/lib/bindReference')
+const assert = require('assert')
+const bindReference = require('../src/bindReference')
 const Declaration = require('../src/lib/declaration')
 const Reference = require('../src/lib/reference')
+const Scope = require('../src/lib/scope')
 
 describe('bindReference', () => {
   it('should bind references in a same scope', () => {
-    const file = {
-      filePath: 'test.js',
-      scope: {
-        items: [
-          new Declaration('a'),
-          new Reference('a')
-        ]
-      }
-    }
-    const bindedFile = bindReference(file)
-    assert.equal(bindedFile.scope.items[0].declarationId, bindedFile.scope.items[1].referenceId)
+    const scope = new Scope('root', [
+      new Declaration('a'),
+      new Reference('a')
+    ])
+    bindReference(scope)
+    assert.notEqual(scope.items[0].declarationId, null)
+    assert.equal(scope.items[0].declarationId, scope.items[1].referenceId)
   })
   it('should bind references in a child scope', () => {
-    const file = {
-      filePath: 'test.js',
-      scope: {
-        scope: {
-          b: {
-            scope: {},
-            items: [
-              new Declaration('b'),
-              new Declaration('a')
-            ]
-          }
-        },
-        items: [
-          new Declaration('a'),
-          new Reference('b')
-        ]
-      }
-    }
-    const bindedFile = bindReference(file)
-    assert.equal(bindedFile.scope.items[0].)
+    const scope = new Scope('root', [
+      new Scope('b', [
+        new Reference('a')
+      ]),
+      new Declaration('a')
+    ])
+    bindReference(scope)
+    assert.notEqual(scope.items[1].declarationId, null)
+    assert.equal(scope.items[0].items[0].referenceId, scope.items[1].declarationId)
   })
-  it('should work', () => {
-    const file = {
-      filePath: 'test.js',
-      scope: {
-        scopes: {
-          b: {
-            scopes: {
-              c: {
-                scopes: {},
-                items: [
-                  new Declaration('d'),
-                  new Declaration('e'),
-                  new Reference('a')
-                ]
-              }
-            },
-            items: [
-              new Reference('a'),
-              new Declaration('a')
-            ]
-          }
-        },
-        items: [
-          new Declaration('a'),
-          new Reference('b.c'),
-          new Reference('b.c.d')
-        ]
-      }
-    }
-    assert.deepEqual(bindReference(file), {
-      filePath: 'test.js',
-      scope: {
-        scopes: {
-          b: {
-            scopes: {
-              c: {
-                scopes: {},
-                items: [
-                  new Declaration('d')
-                ]
-              }
-            },
-            items: [
-              new Reference('a')
-            ]
-          }
-        },
-        items: [
-          new Declaration('a'),
-          new Reference('b.c')
-        ]
-      }
-    })
+  it('should obey the priority of declarations', () => {
+    const scope = new Scope('root', [
+      new Scope('1', [
+        new Scope('2', [
+          new Scope('3', [
+            new Declaration('a')
+          ]),
+          new Reference('a')
+        ]),
+        new Declaration('a')
+      ]),
+      new Declaration('a')
+    ])
+    bindReference(scope)
+    assert.notEqual(scope.items[0].items[1].declarationId, null)
+    assert.equal(scope.items[0].items[0].items[1].referenceId, scope.items[0].items[1].declarationId)
   })
 })
-*/

@@ -4,7 +4,8 @@ const bindReference = require('./bindReference')
 
 function readProgram(filePath, program) {
   const result = readFunction(program)
-  console.log(bindReference(result))
+  bindReference(result)
+  console.log(result)
   return new Program(filePath, result)
 }
 
