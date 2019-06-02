@@ -42,4 +42,29 @@ describe('bindReference', () => {
     assert.notEqual(scope.items[0].items[1].declarationId, null)
     assert.equal(scope.items[0].items[0].items[1].referenceId, scope.items[0].items[1].declarationId)
   })
+  it('should support object-style reference', () => {
+    const scope = new Scope('root', [
+      new Reference('a.b.c'),
+      new Scope('a', [
+        new Scope('b', [
+          new Declaration('c')
+        ])
+      ])
+    ])
+    bindReference(scope)
+    assert.notEqual(scope.items[0].referenceId, null)
+    assert.equal(scope.items[0].referenceId, scope.items[1].items[0].items[0].declarationId)
+  })
+  it('should support object-style reference for scope', () => {
+    const scope = new Scope('root', [
+      new Reference('a.b'),
+      new Scope('a', [
+        new Scope('b', [
+        ])
+      ])
+    ])
+    bindReference(scope)
+    assert.notEqual(scope.items[0].referenceId, null)
+    assert.equal(scope.items[0].referenceId, scope.items[1].items[0].scopeId)
+  })
 })
