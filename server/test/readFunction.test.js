@@ -1,9 +1,8 @@
 const assert = require('assert')
 const acorn = require('acorn')
 const readFunction = require('../src/readFunction')
-const Declaration = require('../src/lib/declaration')
 const Reference = require('../src/lib/reference')
-const Scope = require('../src/lib/scope')
+const Declaration = require('../src/lib/declaration')
 const anonymous = require('../src/lib/anonymous')
 
 describe('readFunction', () => {
@@ -13,7 +12,7 @@ describe('readFunction', () => {
     let a2 = 10
     const b = 'hoge'
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
       new Declaration('a'),
       new Declaration('a2'),
       new Declaration('b')
@@ -31,12 +30,12 @@ describe('readFunction', () => {
       }
     }
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
-      new Scope('obj1', [
-        new Scope('a', [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('obj1', [
+        new Declaration('a', [
           new Reference('a')
         ]),
-        new Scope('b', [
+        new Declaration('b', [
           new Reference('a2')
         ])
       ])
@@ -56,15 +55,15 @@ describe('readFunction', () => {
       obj1.b = ''
     }
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
-      new Scope('fn1', [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('fn1', [
         new Reference('a2')
       ]),
-      new Scope('fn2', [
+      new Declaration('fn2', [
         new Reference('a2'),
         new Reference('b')
       ]),
-      new Scope('fn3', [
+      new Declaration('fn3', [
         new Reference('obj1.a'),
         new Reference('obj1.b')
       ])
@@ -85,16 +84,16 @@ describe('readFunction', () => {
       obj1.fn()
     }
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
-      new Scope('obj1', [
-        new Scope('a', [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('obj1', [
+        new Declaration('a', [
           new Reference('a'),
           new Reference('b'),
           new Reference('c'),
           new Reference('fn')
         ])
       ]),
-      new Scope('a', [
+      new Declaration('a', [
         new Reference('a'),
         new Reference('b'),
         new Reference('c'),
@@ -112,7 +111,7 @@ describe('readFunction', () => {
     else {
     }
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
       new Declaration('a'),
       new Reference('a'),
       new Declaration('b'),
@@ -127,7 +126,7 @@ describe('readFunction', () => {
     const array = [a,b,c,10,...d]
     array[0] = 1
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
       new Declaration('array'),
       new Reference('a'),
       new Reference('b'),
@@ -148,11 +147,11 @@ describe('readFunction', () => {
       const a = b
     })
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
       new Declaration('a'),
       new Declaration('b'),
       new Reference('call'),
-      new Scope(anonymous, [
+      new Declaration(anonymous, [
         new Declaration('a'),
         new Reference('b')
       ])
@@ -168,7 +167,7 @@ describe('readFunction', () => {
       j++
     }
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
       new Declaration('i'),
       new Reference('i'),
       new Reference('i'),
@@ -184,7 +183,7 @@ describe('readFunction', () => {
       item += '!'
     }
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
       new Declaration('item'),
       new Reference('array'),
       new Reference('item')
@@ -196,7 +195,7 @@ describe('readFunction', () => {
       item += '!'
     }
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
       new Declaration('item'),
       new Reference('array'),
       new Reference('item')
@@ -209,7 +208,7 @@ describe('readFunction', () => {
       i++
     }
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
       new Reference('i'),
       new Reference('i')
     ]))
@@ -221,7 +220,7 @@ describe('readFunction', () => {
       i++
     } while (i === 10)
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
       new Reference('i'),
       new Reference('i')
     ]))
@@ -231,11 +230,11 @@ describe('readFunction', () => {
     !function() { a() }();
     (function() { b() })()
     `)
-    assert.deepEqual(readFunction(code), new Scope(null, [
-      new Scope(anonymous, [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration(anonymous, [
         new Reference('a')
       ]),
-      new Scope(anonymous, [
+      new Declaration(anonymous, [
         new Reference('b')
       ])
     ]))

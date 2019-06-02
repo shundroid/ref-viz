@@ -1,13 +1,12 @@
 module.exports = readFunction
 
-const Declaration = require('./lib/declaration')
 const Reference = require('./lib/reference')
-const Scope = require('./lib/scope')
+const Declaration = require('./lib/declaration')
 const toStringMemberExpression = require('./toStringMemberExpression')
 const anonymous = require('./lib/anonymous')
 
 function readFunction(fn, functionName = null) {
-  const result = new Scope(functionName)
+  const result = new Declaration(functionName)
   for (let node of fn.body) {
     if (readNodes[node.type]) {
       readNodes[node.type](node, result)
@@ -17,7 +16,7 @@ function readFunction(fn, functionName = null) {
 }
 
 function readObject(objectExpression, objectName = null) {
-  const result = new Scope(objectName)
+  const result = new Declaration(objectName)
   for (let property of objectExpression.properties) {
     switch (property.value.type) {
       case 'ObjectExpression':

@@ -7,47 +7,28 @@ function bindReference(program, navigation = []) {
       const reference = item.referenceName.split('.')
       for (let i = navigation.length - 1; i >= 0; i--) {
         const matchDeclarations = navigation[i].items.filter(_item => {
-          if (_item.variableName) {
-            return _item.variableName === reference[0]
-          } else if (_item.scopeName) {
-            return _item.scopeName === reference[0]
-          }
-          return false
+          return _item.isDeclaration && _item.name === reference[0]
         })
         if (matchDeclarations.length > 0) {
-          let currentScope = matchDeclarations[0]
-          if (currentScope.variableName && currentScope.declarationId === null) {
-            currentScope.declarationId = newId
-            newId++
-          } else if (currentScope.scopeName) {
-            if (reference.length > 1) {
-              for (let j = 1; j < reference.length; j++) {
-                if (currentScope.variableName) break
-                const variables = currentScope.items.filter(item => item.variableName === reference[j])
-                if (variables.length > 0) {
-                  currentScope = variables[0]
-                  break
-                }
-                const scopes = currentScope.items.filter(item => item.scopeName === reference[j])
-                if (scopes.length > 0) {
-                  currentScope = scopes[0]
-                }
+          let currentDec = matchDeclarations[0]
+          if (reference.length > 1) {
+            for (let j = 1; j < reference.length; j++) {
+              const decs = currentDec.items.filter(item => item.isDeclaration && item.name === reference[j])
+              if (decs.length > 0) {
+                currentDec = decs[0]
               }
             }
-            if (currentScope.variableName && currentScope.declarationId === null) {
-              currentScope.declarationId = newId
-              newId++
-            } else if (currentScope.scopeName && currentScope.scopeId === null) {
-              currentScope.scopeId = newId
-              newId++
-            }
           }
-          item.referenceId = currentScope.variableName ? currentScope.declarationId : currentScope.scopeId
+          if (currentDec.id === null) {
+            currentDec.id = newId
+            newId++
+          }
+          item.referenceId = currentDec.id
           break
         }
         // if there's not an accurate declaration, we don't rewrite referenceId.
       }
-    } else if (item.scopeName) {
+    } else if (item.name) {
       bindReference(item, navigation.slice(0))
     }
   }

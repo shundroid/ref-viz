@@ -1,35 +1,34 @@
 const assert = require('assert')
 const bindReference = require('../src/bindReference')
-const Declaration = require('../src/lib/declaration')
 const Reference = require('../src/lib/reference')
-const Scope = require('../src/lib/scope')
+const Declaration = require('../src/lib/declaration')
 
 describe('bindReference', () => {
   it('should bind references in a same scope', () => {
-    const scope = new Scope('root', [
+    const scope = new Declaration('root', [
       new Declaration('a'),
       new Reference('a')
     ])
     bindReference(scope)
-    assert.notEqual(scope.items[0].declarationId, null)
-    assert.equal(scope.items[0].declarationId, scope.items[1].referenceId)
+    assert.notEqual(scope.items[0].id, null)
+    assert.equal(scope.items[0].id, scope.items[1].referenceId)
   })
   it('should bind references in a child scope', () => {
-    const scope = new Scope('root', [
-      new Scope('b', [
+    const scope = new Declaration('root', [
+      new Declaration('b', [
         new Reference('a')
       ]),
       new Declaration('a')
     ])
     bindReference(scope)
-    assert.notEqual(scope.items[1].declarationId, null)
-    assert.equal(scope.items[0].items[0].referenceId, scope.items[1].declarationId)
+    assert.notEqual(scope.items[1].id, null)
+    assert.equal(scope.items[0].items[0].referenceId, scope.items[1].id)
   })
   it('should obey the priority of declarations', () => {
-    const scope = new Scope('root', [
-      new Scope('1', [
-        new Scope('2', [
-          new Scope('3', [
+    const scope = new Declaration('root', [
+      new Declaration('1', [
+        new Declaration('2', [
+          new Declaration('3', [
             new Declaration('a')
           ]),
           new Reference('a')
@@ -39,32 +38,32 @@ describe('bindReference', () => {
       new Declaration('a')
     ])
     bindReference(scope)
-    assert.notEqual(scope.items[0].items[1].declarationId, null)
-    assert.equal(scope.items[0].items[0].items[1].referenceId, scope.items[0].items[1].declarationId)
+    assert.notEqual(scope.items[0].items[1].id, null)
+    assert.equal(scope.items[0].items[0].items[1].referenceId, scope.items[0].items[1].id)
   })
   it('should support object-style reference', () => {
-    const scope = new Scope('root', [
+    const scope = new Declaration('root', [
       new Reference('a.b.c'),
-      new Scope('a', [
-        new Scope('b', [
+      new Declaration('a', [
+        new Declaration('b', [
           new Declaration('c')
         ])
       ])
     ])
     bindReference(scope)
     assert.notEqual(scope.items[0].referenceId, null)
-    assert.equal(scope.items[0].referenceId, scope.items[1].items[0].items[0].declarationId)
+    assert.equal(scope.items[0].referenceId, scope.items[1].items[0].items[0].id)
   })
   it('should support object-style reference for scope', () => {
-    const scope = new Scope('root', [
+    const scope = new Declaration('root', [
       new Reference('a.b'),
-      new Scope('a', [
-        new Scope('b', [
+      new Declaration('a', [
+        new Declaration('b', [
         ])
       ])
     ])
     bindReference(scope)
     assert.notEqual(scope.items[0].referenceId, null)
-    assert.equal(scope.items[0].referenceId, scope.items[1].items[0].scopeId)
+    assert.equal(scope.items[0].referenceId, scope.items[1].items[0].id)
   })
 })
