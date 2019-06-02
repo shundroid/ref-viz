@@ -82,6 +82,19 @@ const readNodes = {
       readNodes[node.alternate.type](node.alternate, result)
     }
   },
+  SwitchStatement(node, result) {
+    if (readExpressions[node.discriminant.type]) {
+      readExpressions[node.discriminant.type](node.discriminant, result)
+    }
+    for (let switchCase of node.cases) {
+      if (readNodes[switchCase.consequent.type]) {
+        readNodes[switchCase.consequent.type](switchCase.consequent, result)
+      }
+      if (switchCase.test !== null && readExpressions[switchCase.test.type]) {
+        readExpressions[switchCase.test.type](switchCase.test, result)
+      }
+    }
+  },
   ForStatement(node, result) {
     if (node.init && readNodes[node.init.type]) {
       readNodes[node.init.type](node.init, result)
