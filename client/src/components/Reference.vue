@@ -3,26 +3,23 @@
     v-if="isActive"
     :viewBox="viewBox"
     :style="{
-      top: `${y}px`,
-      left: `${x}px`,
+      top: `${from.y * 100}%`,
+      left: `${from.x * 100}%`,
       transform: `rotate(${degree}deg)`,
-      width: `${distance}px`
+      width: `${distance * 100}%`
     }">
     <g stroke="black">
-      <line x1="0" y="5.5" :x2="distance - 10" y2="5.5" stroke-width="2" marker-end="url(#mu_mh)" />
+      <line x1="0" y1="5.5" :x2="(distance * 100) - 10" y2="5.5" stroke-width="2" marker-end="url(#mu_mh)" />
     </g>
   </svg>
 </template>
 
 <script>
 import { mapState } from 'vuex'
+import { toGlobalPos, toLocalPos } from '../convertPos'
 
 export default {
   props: {
-    x: Number,
-    y: Number,
-    // x2: Number,
-    // y2: Number,
     reference: Object
   },
   computed: {
@@ -31,43 +28,32 @@ export default {
     },
     ...mapState(['declarations']),
     width() {
-      return Math.abs(this.x - this.xTo)
+      return Math.abs(this.from.x - this.to.x)
     },
     height() {
-      return Math.abs(this.y - this.yTo)
+      return Math.abs(this.from.y - this.to.y)
     },
     distance() {
       return Math.sqrt(this.width ** 2 + this.height ** 2)
     },
     viewBox() {
-      return `0 0 ${this.distance} 10`
+      return `0 0 ${this.distance * 100} 10`
     },
     degree() {
-      const plusDeg = (this.xTo - this.x) < 0 ? 180 : 0
-      return Math.atan((this.yTo - this.y) / (this.xTo - this.x)) / Math.PI * 180 + plusDeg
+      const plusDeg = (this.to.x - this.from.x) < 0 ? 180 : 0
+      return Math.atan((this.to.y - this.from.y) / (this.to.x - this.from.x)) / Math.PI * 180 + plusDeg
     },
-    xTo() {
+    to() {
       if (this.declarations[this.reference.referenceId]) {
         const component = this.declarations[this.reference.referenceId]
-        return component.x
+        const globalPos = toGlobalPos(component.$parent, { x: component.x + component.margin, y: component.y + component.margin })
+        const localPos = toLocalPos(this.$parent, globalPos)
+        return localPos
       }
-      return 0
+      return { x: 0, y: 0 }
     },
-    yTo() {
-      if (this.declarations[this.reference.referenceId]) {
-        const component = this.declarations[this.reference.referenceId]
-        return component.y
-      }
-      return 0
-    }
-  },
-  watch: {
-    declarations() {
-      console.log('hoge')
-      if (this.declarations[this.reference.referenceId]) {
-        console.log(component)
-        // this.x1 = this.declarations[this.referenceId]
-      }
+    from() {
+      return { x: 0, y: 0 }
     }
   }
 }
@@ -75,7 +61,7 @@ export default {
 
 <style scoped>
 svg {
-  position: fixed;
+  position: absolute;
   transform-origin: center left;
 }
 </style>

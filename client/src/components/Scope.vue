@@ -1,39 +1,28 @@
 <template>
   <section :style="{
-      width: `${size - margin * 2}px`,
-      height: `${size - margin * 2}px`,
-      top: `${y}px`,
-      left: `${x}px`
+      width: `${(size - margin * 2) * 100}%`,
+      height: `${(size - margin * 2) * 100}%`,
+      top: `${(y + margin) * 100}%`,
+      left: `${(x + margin) * 100}%`
     }">
     <span>{{ scopeName }}</span>
-    <template v-if="childSize - 20 > 20 && scope !== null">
+    <template v-if="scope !== null">
       <template v-for="(item, index) in scopes">
         <Scope
-          v-if="item.scopeName"
+          v-if="item.name"
           :key="index"
           :scope="item"
-          :scopeName="item.scopeName"
-          :x="x + margin + childSize * (index % columnCount)"
-          :y="y + margin * 2 + childSize * Math.floor(index / columnCount)"
+          :scopeName="item.name"
+          :x="childSize * (index % columnCount)"
+          :y="childSize * Math.floor(index / columnCount)"
           :size="childSize"
-          :margin="10"
-          :scopeId="item.scopeId"
+          :margin="childMargin"
+          :scopeId="item.id"
           :location="`${location}.${key}`" />
-        <Scope
-          v-if="item.variableName"
-          :key="index"
-          :scope="null"
-          :scopeName="item.variableName"
-          :x="x + margin + childSize * (index % columnCount)"
-          :y="y + margin * 2 + childSize * Math.floor(index / columnCount)"
-          :size="childSize"
-          :margin="10"
-          :scopeId="item.declarationId"
-          :location="location" />
       </template>
     </template>
     <template v-if="scope !== null">
-      <Reference v-for="(item, index) in references" :key="index" :reference="item" :x="x" :y="y" />
+      <Reference v-for="(item, index) in references" :key="index" :reference="item" />
     </template>
   </section>
 </template>
@@ -54,14 +43,17 @@ export default {
     location: String,
     scopeId: Number
   },
+  data() {
+    return {
+      childMargin: 0.05
+    }
+  },
   components: {
     Reference
   },
   computed: {
     scopes() {
-      return this.scope.items.filter(item => {
-        return item.scopeName || item.variableName
-      })
+      return this.scope.items.filter(item => item.isDeclaration)
     },
     references() {
       return this.scope.items.filter(item => item.referenceName && item.referenceId !== null)
@@ -73,7 +65,7 @@ export default {
       return Math.ceil(Math.sqrt(this.scopes.length))
     },
     childSize() {
-      return Math.floor((this.size - this.margin * 2 - 2) / this.columnCount)
+      return 1 / this.columnCount
     }
   },
   methods: {
@@ -85,7 +77,6 @@ export default {
     }
   },
   beforeDestroy() {
-    console.log(this.scopeId)
     if (this.scopeId) {
       this.removeDeclaration(this)
     }
@@ -100,7 +91,7 @@ section {
   flex-wrap: wrap; */
   box-sizing: border-box;
   /* flex-direction: column; */
-  position: fixed;
+  position: absolute;
 }
 span {
   position: absolute;
