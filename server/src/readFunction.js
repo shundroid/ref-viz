@@ -5,197 +5,229 @@ const Declaration = require('./lib/declaration')
 const toStringMemberExpression = require('./toStringMemberExpression')
 const anonymous = require('./lib/anonymous')
 
-function readFunction(fn, functionName = null) {
-  const result = new Declaration(functionName)
+let details = {}
+
+function readFunction(fn, functionName = null, _details = null) {
+  if (_details !== null) {
+    details = _details
+  }
+  const scope = new Declaration(functionName)
   for (let node of fn.body) {
     if (readNodes[node.type]) {
-      readNodes[node.type](node, result)
+      readNodes[node.type](node, scope)
     }
   }
-  return result
+  return scope
 }
 
 function readObject(objectExpression, objectName = null) {
-  const result = new Declaration(objectName)
+  const scope = new Declaration(objectName)
   for (let property of objectExpression.properties) {
     switch (property.value.type) {
       case 'ObjectExpression':
-        readExpressions.ObjectExpression(property.value, result, property.key.name)
+        readExpressions.ObjectExpression(property.value, scope, property.key.name)
         break
       case 'ArrowFunctionExpression':
       case 'FunctionExpression':
-        readExpressions.FunctionExpression(property.value, result, property.key.name)
+        readExpressions.FunctionExpression(property.value, scope, property.key.name)
         break
       default:
-        result.add(new Declaration(property.key.name))
+        scope.add(new Declaration(property.key.name))
         if (readExpressions[property.value.type]) {
-          readExpressions[property.value.type](property.value, result)
+          readExpressions[property.value.type](property.value, scope)
         }
     }
   }
-  return result
+  return scope
 }
 
 const readNodes = {
-  VariableDeclaration(node, result) {
+  VariableDeclaration(node, scope) {
     for (let declarator of node.declarations) {
       if (declarator.init) {
         switch (declarator.init.type) {
           case 'ObjectExpression':
-            readExpressions.ObjectExpression(declarator.init, result, declarator.id.name)
+            readExpressions.ObjectExpression(declarator.init, scope, declarator.id.name)
             break
           case 'ArrowFunctionExpression':
           case 'FunctionExpression':
-            readExpressions.FunctionExpression(declarator.init, result, declarator.id.name)
+            readExpressions.FunctionExpression(declarator.init, scope, declarator.id.name)
             break
           default:
-            result.add(new Declaration(declarator.id.name))
+            if (declarator.init.type === 'CallExpression' && declarator.init.callee.name === 'require') {
+              const declaration = new Declaration(declarator.id.name)
+              declaration.options = {
+                type: 'import',
+                file: declarator.init.arguments[0].value
+              }
+              scope.add(declaration)
+              if (!details.imports) details.imports = []
+              details.imports.push(declarator.init.arguments[0].value)
+              break
+            }
+            scope.add(new Declaration(declarator.id.name))
             if (readExpressions[declarator.init.type]) {
-              readExpressions[declarator.init.type](declarator.init, result)
+              readExpressions[declarator.init.type](declarator.init, scope)
             }
             break
         }
       } else {
         if (declarator.type === 'VariableDeclarator') {
-          result.add(new Declaration(declarator.id.name))
+          scope.add(new Declaration(declarator.id.name))
         }
       }
     }
   },
-  FunctionDeclaration(node, result) {
+  FunctionDeclaration(node, scope) {
     readExpressions.FunctionExpression(node,
-        result, node.id.name)
+        scope, node.id.name)
   },
-  ExpressionStatement(node, result) {
+  ExpressionStatement(node, scope) {
     if (readExpressions[node.expression.type]) {
-      readExpressions[node.expression.type](node.expression, result)
+      readExpressions[node.expression.type](node.expression, scope)
     }
   },
-  IfStatement(node, result) {
+  IfStatement(node, scope) {
     if (readExpressions[node.test.type]) {
-      readExpressions[node.test.type](node.test, result)
+      readExpressions[node.test.type](node.test, scope)
     }
     if (readNodes[node.consequent.type]) {
-      readNodes[node.consequent.type](node.consequent, result)
+      readNodes[node.consequent.type](node.consequent, scope)
     }
     if (node.alternate && readNodes[node.alternate.type]) {
-      readNodes[node.alternate.type](node.alternate, result)
+      readNodes[node.alternate.type](node.alternate, scope)
     }
   },
-  SwitchStatement(node, result) {
+  SwitchStatement(node, scope) {
     if (readExpressions[node.discriminant.type]) {
-      readExpressions[node.discriminant.type](node.discriminant, result)
+      readExpressions[node.discriminant.type](node.discriminant, scope)
     }
     for (let switchCase of node.cases) {
       if (readNodes[switchCase.consequent.type]) {
-        readNodes[switchCase.consequent.type](switchCase.consequent, result)
+        readNodes[switchCase.consequent.type](switchCase.consequent, scope)
       }
       if (switchCase.test !== null && readExpressions[switchCase.test.type]) {
-        readExpressions[switchCase.test.type](switchCase.test, result)
+        readExpressions[switchCase.test.type](switchCase.test, scope)
       }
     }
   },
-  ForStatement(node, result) {
+  ForStatement(node, scope) {
     if (node.init && readNodes[node.init.type]) {
-      readNodes[node.init.type](node.init, result)
+      readNodes[node.init.type](node.init, scope)
     }
     if (node.test && readExpressions[node.test.type]) {
-      readExpressions[node.test.type](node.test, result)
+      readExpressions[node.test.type](node.test, scope)
     }
     if (node.update && readExpressions[node.update.type]) {
-      readExpressions[node.update.type](node.update, result)
+      readExpressions[node.update.type](node.update, scope)
     }
     if (readNodes[node.body.type]) {
-      readNodes[node.body.type](node.body, result)
+      readNodes[node.body.type](node.body, scope)
     }
   },
-  ForOfStatement(node, result) {
+  ForOfStatement(node, scope) {
     if (readNodes[node.left.type]) {
-      readNodes[node.left.type](node.left, result)
+      readNodes[node.left.type](node.left, scope)
     }
     if (readExpressions[node.right.type]) {
-      readExpressions[node.right.type](node.right, result)
+      readExpressions[node.right.type](node.right, scope)
     }
     if (readNodes[node.body.type]) {
-      readNodes[node.body.type](node.body, result)
+      readNodes[node.body.type](node.body, scope)
     }
   },
-  ForInStatement(node, result) {
-    readNodes.ForOfStatement(node, result)
+  ForInStatement(node, scope) {
+    readNodes.ForOfStatement(node, scope)
   },
-  WhileStatement(node, result) {
+  WhileStatement(node, scope) {
     if (readExpressions[node.test.type]) {
-      readExpressions[node.test.type](node.test, result)
+      readExpressions[node.test.type](node.test, scope)
     }
     if (readNodes[node.body.type]) {
-      readNodes[node.body.type](node.body, result)
+      readNodes[node.body.type](node.body, scope)
     }
   },
-  DoWhileStatement(node, result) {
-    readNodes.WhileStatement(node, result)
+  DoWhileStatement(node, scope) {
+    readNodes.WhileStatement(node, scope)
   },
-  BlockStatement(node, result) {
+  BlockStatement(node, scope) {
     const fn = readFunction(node)
-    result.merge(fn)
+    scope.merge(fn)
   },
-  ReturnStatement(node, result) {
-    if (readExpressions[node.argument.type]) {
-      readExpressions[node.argument.type](node.argument, result)
+  ReturnStatement(node, scope) {
+    if (node.argument && readExpressions[node.argument.type]) {
+      readExpressions[node.argument.type](node.argument, scope)
     }
   }
 }
 
 const readExpressions = {
   // a, b, ...
-  Identifier(expression, result) {
-    result.add(new Reference(expression.name))
+  Identifier(expression, scope) {
+    scope.add(new Reference(expression.name))
   },
   // a.b, c.d, ...
-  MemberExpression(expression, result) {
+  MemberExpression(expression, scope) {
     const memberExp = toStringMemberExpression(expression)
-    result.add(new Reference(memberExp.members.join('.')))
+    scope.add(new Reference(memberExp.members.join('.')))
     for (let reference of memberExp.references) {
-      result.add(reference)
+      scope.add(reference)
     }
   },
   // a = 0, b = c, ...
-  AssignmentExpression(expression, result) {
+  AssignmentExpression(expression, scope) {
+    if (expression.left.type === 'Identifier' && expression.left.name === 'exports') {
+      if (expression.right.type === 'Identifier') {
+        details.exports = new Reference(expression.right.name)
+      }
+      // if else, make anonymous declaration and reference to it.
+      return
+    }
+    if (expression.left.type === 'MemberExpression' &&
+        expression.left.object.type === 'Identifier' && expression.left.property.type === 'Identifier' &&
+        expression.left.object.name === 'module' && expression.left.property.name === 'exports') {
+      if (expression.right.type === 'Identifier') {
+        details.exports = new Reference(expression.right.name)
+      }
+      // if else, make anonymous declaration and reference to it.
+      return
+    }
     if (readExpressions[expression.left.type]) {
-      readExpressions[expression.left.type](expression.left, result)
+      readExpressions[expression.left.type](expression.left, scope)
     }
     if (readExpressions[expression.right.type]) {
-      readExpressions[expression.right.type](expression.right, result)
+      readExpressions[expression.right.type](expression.right, scope)
     }
   },
   // a + b, c === d, ...
-  BinaryExpression(expression, result) {
-    readExpressions.AssignmentExpression(expression, result)
+  BinaryExpression(expression, scope) {
+    readExpressions.AssignmentExpression(expression, scope)
   },
   // !a
-  UnaryExpression(expression, result) {
+  UnaryExpression(expression, scope) {
     if (readExpressions[expression.argument.type]) {
-      readExpressions[expression.argument.type](expression.argument, result)
+      readExpressions[expression.argument.type](expression.argument, scope)
     }
   },
   // a(), a.b(100), ...
-  CallExpression(expression, result) {
+  CallExpression(expression, scope) {
     if (readExpressions[expression.callee.type]) {
-      readExpressions[expression.callee.type](expression.callee, result)
+      readExpressions[expression.callee.type](expression.callee, scope)
     }
     for (let arg of expression.arguments) {
       if (readExpressions[arg.type]) {
-        readExpressions[arg.type](arg, result)
+        readExpressions[arg.type](arg, scope)
       }
     }
   },
   // { a, b: 'hoge', ... }
   // declarations is only used for VariableDeclaration
-  ObjectExpression(expression, result, objectName) {
+  ObjectExpression(expression, scope, objectName) {
     const obj = readObject(expression, objectName)
-    result.add(obj)
+    scope.add(obj)
   },
   // function() {}
-  FunctionExpression(expression, result, functionName = null) {
+  FunctionExpression(expression, scope, functionName = null) {
     if (functionName === null) {
       functionName = anonymous
     }
@@ -217,33 +249,33 @@ const readExpressions = {
           break
       }
     }
-    result.add(fn)
+    scope.add(fn)
   },
-  ArrowFunctionExpression(expression, result, functionName = null) {
-    readExpressions.FunctionExpression(expression, result, functionName)
+  ArrowFunctionExpression(expression, scope, functionName = null) {
+    readExpressions.FunctionExpression(expression, scope, functionName)
   },
   // [a, b, ...]
-  ArrayExpression(expression, result) {
+  ArrayExpression(expression, scope) {
     for (let element of expression.elements) {
       if (readExpressions[element.type]) {
-        readExpressions[element.type](element, result)
+        readExpressions[element.type](element, scope)
       }
     }
   },
   // ...a
-  SpreadElement(expression, result) {
-    result.add(new Reference(expression.argument.name))
+  SpreadElement(expression, scope) {
+    scope.add(new Reference(expression.argument.name))
   },
   // i++, --j
-  UpdateExpression(expression, result) {
-    result.add(new Reference(expression.argument.name))
+  UpdateExpression(expression, scope) {
+    scope.add(new Reference(expression.argument.name))
   },
   // new A()
-  NewExpression(expression, result) {
-    result.add(new Reference(expression.callee.name))
+  NewExpression(expression, scope) {
+    scope.add(new Reference(expression.callee.name))
     for (let element of expression.arguments) {
       if (readExpressions[element.type]) {
-        readExpressions[element.type](element, result)
+        readExpressions[element.type](element, scope)
       }
     }
   }

@@ -4,6 +4,7 @@ class Scope {
     this.name = name
     this.items = items
     this.isDeclaration = true
+    this.options = {}
   }
   add(item) {
     this.items.push(item)

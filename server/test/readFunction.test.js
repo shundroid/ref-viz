@@ -294,4 +294,37 @@ describe('readFunction', () => {
       ]),
     ]))
   })
+  it('should support require call', () => {
+    const code = acorn.Parser.parse(`
+    const a = require('./a.js')
+    let b = require('./b.js')
+    `)
+    const decA = new Declaration('a')
+    decA.options = {
+      type: 'import',
+      file: './a.js'
+    }
+    const decB = new Declaration('b')
+    decB.options = {
+      type: 'import',
+      file: './b.js'
+    }
+    const details = {}
+    assert.deepEqual(readFunction(code, null, details), new Declaration(null, [decA, decB]))
+    assert.deepEqual(details.imports, ['./a.js', './b.js'])
+  })
+  it('should support exports', () => {
+    const code = acorn.Parser.parse(`
+    exports = hoge
+    `)
+    const details = {}
+    readFunction(code, null, details)
+    assert.deepEqual(details.exports, new Reference('hoge'))
+    const code2 = acorn.Parser.parse(`
+    module.exports = fuga
+    `)
+    const details2 = {}
+    readFunction(code2, null, details2)
+    assert.deepEqual(details2.exports, new Reference('fuga'))
+  })
 })
