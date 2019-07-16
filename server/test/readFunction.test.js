@@ -327,4 +327,17 @@ describe('readFunction', () => {
     readFunction(code2, null, details2)
     assert.deepEqual(details2.exports, new Reference('fuga'))
   })
+  it('should support class', () => {
+    const code = acorn.Parser.parse(`
+    class A {
+
+    }
+    const B = class extends A {}
+    `)
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('A'),
+      new Declaration('B'),
+      new Reference('A')
+    ]))
+  })
 })

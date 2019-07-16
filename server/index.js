@@ -3,24 +3,30 @@ const path = require('path')
 
 const readFile = require('./src/readFile')
 const updateServerData = require('./src/serve')
-const Declaration = require('./src/lib/declaration')
+const Scope = require('./src/lib/declaration')
 
-const fileAndInfos = []
+const fileAndInfos = {}
 
-const entryFile = './src/readFunction.js'
+const entryFile = path.normalize('./src/readFunction.js')
 
 function onReadFile({ file, details }) {
   return new Promise((resolve, reject) => {
-    fileAndInfos.push({ file, details })
+    fileAndInfos[file.name] = { file, details }
     if (details.imports) {
       const promises = []
-      for (let importFile of details.imports) {
-        promises.push(
-          readFile(path.join(path.dirname(file.name), importFile + '.js'))
-          .then(onReadFile)
-        )
+      const importFiles = Object.keys(details.imports)
+      for (let importFile of importFiles) {
+        const importPath = path.join(path.dirname(file.name), importFile + '.js')
+        if (importPath !== importFile) {
+          details.imports[importPath] = details.imports[importFile]
+          delete details.imports[importFile]
+        }
+        if (!fileAndInfos[importPath]) {
+          promises.push(readFile(importPath).then(onReadFile))
+        }
       }
       Promise.all(promises).then(() => {
+        fixImportReferences(file, details)
         resolve()
       })
     } else {
@@ -28,9 +34,38 @@ function onReadFile({ file, details }) {
     }
   })
 }
+
+function fixImportReferences(file, details) {
+  const importIds = Object.values(details.imports)
+  const importFiles = Object.keys(details.imports)
+  for (let item of file.items) {
+    if (item.referenceId) {
+      const index = importIds.indexOf(item.referenceId)
+      if (index !== -1) {
+        if (fileAndInfos[importFiles[index]]) {
+          const referenceFile = fileAndInfos[importFiles[index]]
+          if (referenceFile.details && referenceFile.exports) {
+            item.referenceId = referenceFile.details.exports.referenceId
+          }
+        }
+      }
+    } else if (item.isDeclaration) {
+      fixImportReferences(item, details)
+    }
+  }
+}
+
+function toOneScope(fileAndInfos) {
+  const scope = new Scope('root')
+  const files = Object.values(fileAndInfos)
+  for (let file of files) {
+    scope.add(file.file)
+  }
+  return scope
+}
+
 readFile(entryFile).then(onReadFile).then(() => {
-  console.log(fileAndInfos)
-  updateServerData(fileAndInfos)
+  updateServerData(toOneScope(fileAndInfos))
 }).catch(error => {
   console.error(error)
 })

@@ -61,8 +61,8 @@ const readNodes = {
                 file: declarator.init.arguments[0].value
               }
               scope.add(declaration)
-              if (!details.imports) details.imports = []
-              details.imports.push(declarator.init.arguments[0].value)
+              if (!details.imports) details.imports = {}
+              details.imports[declarator.init.arguments[0].value] = null
               break
             }
             scope.add(new Declaration(declarator.id.name))
@@ -81,6 +81,10 @@ const readNodes = {
   FunctionDeclaration(node, scope) {
     readExpressions.FunctionExpression(node,
         scope, node.id.name)
+  },
+  ClassDeclaration(node, scope) {
+    scope.add(new Declaration(node.id.name))
+    readExpressions.ClassExpression(node, scope)
   },
   ExpressionStatement(node, scope) {
     if (readExpressions[node.expression.type]) {
@@ -253,6 +257,11 @@ const readExpressions = {
   },
   ArrowFunctionExpression(expression, scope, functionName = null) {
     readExpressions.FunctionExpression(expression, scope, functionName)
+  },
+  ClassExpression(expression, scope) {
+    if (expression.superClass) {
+      scope.add(new Reference(expression.superClass.name))
+    }
   },
   // [a, b, ...]
   ArrayExpression(expression, scope) {
