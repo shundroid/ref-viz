@@ -46,7 +46,7 @@ export default {
     to() {
       if (this.declarations[this.reference.referenceId]) {
         const component = this.declarations[this.reference.referenceId]
-        const globalPos = toGlobalPos(component.$parent, { x: component.x + component.margin, y: component.y + component.margin })
+        const globalPos = toGlobalPos(component.$parent, { x: component.x, y: component.y })
         const localPos = toLocalPos(this.$parent, globalPos)
         return localPos
       }

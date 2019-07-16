@@ -1,9 +1,9 @@
 <template>
   <section :style="{
-      width: `${(size - margin * 2) * 100}%`,
-      height: `${(size - margin * 2) * 100}%`,
-      top: `${(y + margin) * 100}%`,
-      left: `${(x + margin) * 100}%`
+      width: `${(size) * 100}%`,
+      height: `${(size) * 100}%`,
+      top: `${(y) * 100}%`,
+      left: `${(x) * 100}%`
     }">
     <span>{{ scopeName }}</span>
     <template v-if="scope !== null">
@@ -13,10 +13,9 @@
           :key="index"
           :scope="item"
           :scopeName="item.name"
-          :x="childSize * (index % columnCount)"
-          :y="childSize * Math.floor(index / columnCount)"
-          :size="childSize"
-          :margin="childMargin"
+          :x="childMargin + childSize * (index % columnCount)"
+          :y="childMargin + childSize * Math.floor(index / columnCount)"
+          :size="childSize - childMargin * 2"
           :scopeId="item.id"
           :location="`${location}.${key}`" />
       </template>
@@ -39,7 +38,6 @@ export default {
     x: Number,
     y: Number,
     size: Number,
-    margin: Number,
     location: String,
     scopeId: Number
   },
