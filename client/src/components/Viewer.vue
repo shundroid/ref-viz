@@ -47,7 +47,7 @@ export default {
   },
   mounted() {
     axios.get('http://localhost:8081').then(data => {
-      this.scope = data.data.scope
+      this.scope = data.data
     })
     window.addEventListener('resize', () => {
       this.size = Math.max(window.innerWidth, window.innerHeight)

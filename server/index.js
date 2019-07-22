@@ -44,7 +44,7 @@ function fixImportReferences(file, details) {
       if (index !== -1) {
         if (fileAndInfos[importFiles[index]]) {
           const referenceFile = fileAndInfos[importFiles[index]]
-          if (referenceFile.details && referenceFile.exports) {
+          if (referenceFile.details && referenceFile.details.exports) {
             item.referenceId = referenceFile.details.exports.referenceId
           }
         }

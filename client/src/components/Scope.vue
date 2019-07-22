@@ -53,7 +53,7 @@ export default {
   },
   computed: {
     scopes() {
-      return this.scope.items.filter(item => item.isDeclaration)
+      return this.scope.items.filter(item => item.isDeclaration && item.options.type !== 'import')
     },
     references() {
       return this.scope.items.filter(item => item.referenceName && item.referenceId !== null)
