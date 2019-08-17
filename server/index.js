@@ -46,6 +46,9 @@ function fixImportReferences(file, details) {
           const referenceFile = fileAndInfos[importFiles[index]]
           if (referenceFile.details && referenceFile.details.exports) {
             item.referenceId = referenceFile.details.exports.referenceId
+          } else {
+            // ex: module.exports = 0 (<- not identifier)
+            item.referenceId = referenceFile.file.id
           }
         }
       }

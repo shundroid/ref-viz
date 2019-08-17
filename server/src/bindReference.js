@@ -42,6 +42,8 @@ function searchReference(referenceName, navigation) {
 }
 
 module.exports = function(program, navigation, details = null) {
+  // make fileId
+  program.id = newId++
   bindReference(program, navigation, details)
   if (details && details.exports) {
     // export reference

@@ -183,8 +183,9 @@ const readExpressions = {
     if (expression.left.type === 'Identifier' && expression.left.name === 'exports') {
       if (expression.right.type === 'Identifier') {
         details.exports = new Reference(expression.right.name)
+      } else {
+        // if else, make anonymous declaration and reference for it.
       }
-      // if else, make anonymous declaration and reference to it.
       return
     }
     if (expression.left.type === 'MemberExpression' &&
