@@ -1,48 +1,84 @@
 <template>
-  <section>
-    {{ scopeName }}
-    <div v-if="scope && scope.scopes">
-      <template v-for="key in keys">
-        <Scope v-if="key !== 'br'" :key="key" :scope="scope ? scope.scopes[key] : null" :scopeName="key" />
-        <br v-if="key === 'br'" :key="key">
+  <section :style="{
+      width: `${(size - margin * 2) * 100}%`,
+      height: `${(size - margin * 2) * 100}%`,
+      top: `${(y + margin) * 100}%`,
+      left: `${(x + margin) * 100}%`
+    }">
+    <span>{{ scopeName }}</span>
+    <template v-if="scope !== null">
+      <template v-for="(item, index) in scopes">
+        <Scope
+          v-if="item.name"
+          :key="index"
+          :scope="item"
+          :scopeName="item.name"
+          :x="childSize * (index % columnCount)"
+          :y="childSize * Math.floor(index / columnCount)"
+          :size="childSize"
+          :margin="childMargin"
+          :scopeId="item.id"
+          :location="`${location}.${key}`" />
       </template>
-    </div>
+    </template>
+    <template v-if="scope !== null">
+      <Reference v-for="(item, index) in references" :key="index" :reference="item" />
+    </template>
   </section>
 </template>
 
 <script>
+import { mapMutations } from 'vuex'
+import Reference from './Reference'
+
 export default {
   name: 'Scope',
   props: {
     scope: Object,
-    scopeName: String
+    scopeName: String,
+    x: Number,
+    y: Number,
+    size: Number,
+    margin: Number,
+    location: String,
+    scopeId: Number
+  },
+  data() {
+    return {
+      childMargin: 0.05
+    }
+  },
+  components: {
+    Reference
   },
   computed: {
-    scopeKeys() {
-      return this.scope ? Object.keys(this.scope.scopes) : []
+    scopes() {
+      return this.scope.items.filter(item => item.isDeclaration && item.options.type !== 'import')
     },
-    declarationKeys() {
-      if (this.scope) {
-        return this.scope.items.filter(item => {
-          return item.variableName && this.scopeKeys.indexOf(item.variableName) === -1
-        }).map(item => {
-          return item.variableName
-        })
-      }
-      return []
-    },
-    keys() {
-      return this.scopeKeys.concat(this.declarationKeys)
+    references() {
+      return this.scope.items.filter(item => item.referenceName && item.referenceId !== null)
     },
     columnCount() {
-      return Math.floor(Math.sqrt(this.keys.length))
-    },
-    renderKeys() {
-      const result = this.key.slice(0)
-      for (let i = 1; i * this.columnCount < this.keys.length; i++) {
-        result.splice(i * this.columnCount + i - 1, 0, 'br')
+      if (this.scope === null) {
+        return 0
       }
-      return result
+      return Math.ceil(Math.sqrt(this.scopes.length))
+    },
+    childSize() {
+      return 1 / this.columnCount
+    }
+  },
+  methods: {
+    ...mapMutations(['addDeclaration', 'removeDeclaration'])
+  },
+  mounted() {
+    if (this.scopeId) {
+      this.addDeclaration(this)
+    }
+  },
+  beforeDestroy() {
+    if (this.scopeId) {
+      this.removeDeclaration(this)
     }
   }
 }
@@ -51,11 +87,18 @@ export default {
 <style scoped>
 section {
   border: 1px solid black;
-  padding: 10px;
-  margin: 10px;
+  /* display: flex;
+  flex-wrap: wrap; */
+  box-sizing: border-box;
+  /* flex-direction: column; */
+  position: absolute;
 }
-div {
-  display: flex;
-  flex-wrap: wrap;
+span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 </style>

@@ -1,8 +1,8 @@
 const assert = require('assert')
 const acorn = require('acorn')
 const readFunction = require('../src/readFunction')
-const Declaration = require('../src/lib/declaration')
 const Reference = require('../src/lib/reference')
+const Declaration = require('../src/lib/declaration')
 const anonymous = require('../src/lib/anonymous')
 
 describe('readFunction', () => {
@@ -12,14 +12,11 @@ describe('readFunction', () => {
     let a2 = 10
     const b = 'hoge'
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Declaration('a'),
-        new Declaration('a2'),
-        new Declaration('b')
-      ],
-      scopes: {}
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('a'),
+      new Declaration('a2'),
+      new Declaration('b')
+    ]))
   })
   it('should make object declarations', () => {
     const code = acorn.Parser.parse(`
@@ -33,33 +30,16 @@ describe('readFunction', () => {
       }
     }
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Declaration('obj1')
-      ],
-      scopes: {
-        obj1: {
-          items: [
-            new Declaration('a'),
-            new Declaration('b'),
-          ],
-          scopes: {
-            a: {
-              items: [
-                new Reference('a')
-              ],
-              scopes: {}
-            },
-            b: {
-              items: [
-                new Reference('a2')
-              ],
-              scopes: {}
-            }
-          }
-        }
-      }
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('obj1', [
+        new Declaration('a', [
+          new Reference('a')
+        ]),
+        new Declaration('b', [
+          new Reference('a2')
+        ])
+      ])
+    ]))
   })
   it('should make function declarations', () => {
     const code = acorn.Parser.parse(`
@@ -75,33 +55,19 @@ describe('readFunction', () => {
       obj1.b = ''
     }
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Declaration('fn1'),
-        new Declaration('fn2'),
-        new Declaration('fn3')
-      ],
-      scopes: {
-        fn1: {
-          items: [new Reference('a2')],
-          scopes: {}
-        },
-        fn2: {
-          items: [
-            new Reference('a2'),
-            new Reference('b')
-          ],
-          scopes: {}
-        },
-        fn3: {
-          items: [
-            new Reference('obj1.a'),
-            new Reference('obj1.b')
-          ],
-          scopes: {}
-        }
-      }
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('fn1', [
+        new Reference('a2')
+      ]),
+      new Declaration('fn2', [
+        new Reference('a2'),
+        new Reference('b')
+      ]),
+      new Declaration('fn3', [
+        new Reference('obj1.a'),
+        new Reference('obj1.b')
+      ])
+    ]))
   })
   it('should make references', () => {
     const code = acorn.Parser.parse(`
@@ -118,39 +84,22 @@ describe('readFunction', () => {
       obj1.fn()
     }
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Declaration('obj1'),
-        new Declaration('a')
-      ],
-      scopes: {
-        obj1: {
-          items: [
-            new Declaration('a')
-          ],
-          scopes: {
-            a: {
-              items: [
-                new Reference('a'),
-                new Reference('b'),
-                new Reference('c'),
-                new Reference('fn')
-              ],
-              scopes: {}
-            }
-          }
-        },
-        a: {
-          items: [
-            new Reference('a'),
-            new Reference('b'),
-            new Reference('c'),
-            new Reference('obj1.fn')
-          ],
-          scopes: {}
-        }
-      }
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('obj1', [
+        new Declaration('a', [
+          new Reference('a'),
+          new Reference('b'),
+          new Reference('c'),
+          new Reference('fn')
+        ])
+      ]),
+      new Declaration('a', [
+        new Reference('a'),
+        new Reference('b'),
+        new Reference('c'),
+        new Reference('obj1.fn')
+      ])
+    ]))
   })
   it('should support if statements', () => {
     const code = acorn.Parser.parse(`
@@ -162,35 +111,29 @@ describe('readFunction', () => {
     else {
     }
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Declaration('a'),
-        new Reference('a'),
-        new Declaration('b'),
-        new Reference('a'),
-        new Reference('c'),
-        new Reference('b'),
-        new Reference('b')
-      ],
-      scopes: {}
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('a'),
+      new Reference('a'),
+      new Declaration('b'),
+      new Reference('a'),
+      new Reference('c'),
+      new Reference('b'),
+      new Reference('b')
+    ]))
   })
   it('should support for array', () => {
     const code = acorn.Parser.parse(`
     const array = [a,b,c,10,...d]
     array[0] = 1
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Declaration('array'),
-        new Reference('a'),
-        new Reference('b'),
-        new Reference('c'),
-        new Reference('d'),
-        new Reference('array')
-      ],
-      scopes: {}
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('array'),
+      new Reference('a'),
+      new Reference('b'),
+      new Reference('c'),
+      new Reference('d'),
+      new Reference('array')
+    ]))
   })
   it('should run deepEqual correctly in comparing Symbols', () => {
     assert.deepEqual(Symbol('a').toString(), Symbol('a').toString())
@@ -204,22 +147,15 @@ describe('readFunction', () => {
       const a = b
     })
     `)
-    const expectedResult = {
-      items: [
-        new Declaration('a'),
-        new Declaration('b'),
-        new Reference('call')
-      ],
-      scopes: {}
-    }
-    expectedResult.scopes[anonymous] = {
-      scopes: {},
-      items: [
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('a'),
+      new Declaration('b'),
+      new Reference('call'),
+      new Declaration(anonymous, [
         new Declaration('a'),
         new Reference('b')
-      ]
-    }
-    assert.deepEqual(readFunction([], code), expectedResult)
+      ])
+    ]))
   })
   it('should support for statements', () => {
     const code = acorn.Parser.parse(`
@@ -231,18 +167,15 @@ describe('readFunction', () => {
       j++
     }
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Declaration('i'),
-        new Reference('i'),
-        new Reference('i'),
-        new Reference('i'),
-        new Declaration('j'),
-        new Reference('j'),
-        new Reference('j')
-      ],
-      scopes: {}
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('i'),
+      new Reference('i'),
+      new Reference('i'),
+      new Reference('i'),
+      new Declaration('j'),
+      new Reference('j'),
+      new Reference('j')
+    ]))
   })
   it('should support for-of statements', () => {
     const code = acorn.Parser.parse(`
@@ -250,14 +183,11 @@ describe('readFunction', () => {
       item += '!'
     }
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Declaration('item'),
-        new Reference('array'),
-        new Reference('item')
-      ],
-      scopes: {}
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('item'),
+      new Reference('array'),
+      new Reference('item')
+    ]))
   })
   it('should support for-in statements', () => {
     const code = acorn.Parser.parse(`
@@ -265,14 +195,11 @@ describe('readFunction', () => {
       item += '!'
     }
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Declaration('item'),
-        new Reference('array'),
-        new Reference('item')
-      ],
-      scopes: {}
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('item'),
+      new Reference('array'),
+      new Reference('item')
+    ]))
   })
   it('should support while statements', () => {
     const code = acorn.Parser.parse(`
@@ -281,13 +208,10 @@ describe('readFunction', () => {
       i++
     }
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Reference('i'),
-        new Reference('i')
-      ],
-      scopes: {}
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Reference('i'),
+      new Reference('i')
+    ]))
   })
   it('should support do-while statements', () => {
     const code = acorn.Parser.parse(`
@@ -296,31 +220,124 @@ describe('readFunction', () => {
       i++
     } while (i === 10)
     `)
-    assert.deepEqual(readFunction([], code), {
-      items: [
-        new Reference('i'),
-        new Reference('i')
-      ],
-      scopes: {}
-    })
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Reference('i'),
+      new Reference('i')
+    ]))
   })
   it('should support immediate function', () => {
     const code = acorn.Parser.parse(`
     !function() { a() }();
     (function() { b() })()
     `)
-    const expectedResult = {
-      items: [],
-      scopes: {}
-    }
-    expectedResult.scopes[anonymous] = {
-      items: [
-        new Reference('a'),
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration(anonymous, [
+        new Reference('a')
+      ]),
+      new Declaration(anonymous, [
         new Reference('b')
-      ],
-      scopes: {}
+      ])
+    ]))
+  })
+  it('should support new-expression', () => {
+    const code = acorn.Parser.parse(`
+    new A(a, b, 'hoge', c)
+    `)
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Reference('A'),
+      new Reference('a'),
+      new Reference('b'),
+      new Reference('c')
+    ]))
+  })
+  it('should support return reference', () => {
+    const code = acorn.Parser.parse(`
+    function a() {
+      return a1
     }
-    assert.deepEqual(readFunction([], code), expectedResult)
+    const b = function() {
+      return b1
+    }
+    const c = () => {
+      return c1
+    }
+    `)
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('a', [
+        new Reference('a1')
+      ]),
+      new Declaration('b', [
+        new Reference('b1')
+      ]),
+      new Declaration('c', [
+        new Reference('c1')
+      ])
+    ]))
+  })
+  it('should support arguments', () => {
+    const code = acorn.Parser.parse(`
+    function a(x) {}
+    const b = function(x) {}
+    const c = x => {}
+    const d = (x, y = num, z = 1, ...w) => {}
+    `)
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('a', [new Declaration('x')]),
+      new Declaration('b', [new Declaration('x')]),
+      new Declaration('c', [new Declaration('x')]),
+      new Declaration('d', [
+        new Declaration('x'),
+        new Declaration('y'),
+        new Reference('num'),
+        new Declaration('z'),
+        new Declaration('w')
+      ]),
+    ]))
+  })
+  it('should support require call', () => {
+    const code = acorn.Parser.parse(`
+    const a = require('./a.js')
+    let b = require('./b.js')
+    `)
+    const decA = new Declaration('a')
+    decA.options = {
+      type: 'import',
+      file: './a.js'
+    }
+    const decB = new Declaration('b')
+    decB.options = {
+      type: 'import',
+      file: './b.js'
+    }
+    const details = {}
+    assert.deepEqual(readFunction(code, null, details), new Declaration(null, [decA, decB]))
+    assert.deepEqual(details.imports, ['./a.js', './b.js'])
+  })
+  it('should support exports', () => {
+    const code = acorn.Parser.parse(`
+    exports = hoge
+    `)
+    const details = {}
+    readFunction(code, null, details)
+    assert.deepEqual(details.exports, new Reference('hoge'))
+    const code2 = acorn.Parser.parse(`
+    module.exports = fuga
+    `)
+    const details2 = {}
+    readFunction(code2, null, details2)
+    assert.deepEqual(details2.exports, new Reference('fuga'))
+  })
+  it('should support class', () => {
+    const code = acorn.Parser.parse(`
+    class A {
 
+    }
+    const B = class extends A {}
+    `)
+    assert.deepEqual(readFunction(code), new Declaration(null, [
+      new Declaration('A'),
+      new Declaration('B'),
+      new Reference('A')
+    ]))
   })
 })
