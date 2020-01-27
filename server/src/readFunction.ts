@@ -1,13 +1,13 @@
-module.exports = readFunction
+export default readFunction
 
-const Reference = require('./lib/reference')
-const Declaration = require('./lib/declaration')
-const toStringMemberExpression = require('./toStringMemberExpression')
-const anonymous = require('./lib/anonymous')
+import Reference from './lib/reference'
+import Declaration from './lib/declaration'
+import toStringMemberExpression from './toStringMemberExpression'
+import anonymous from './lib/anonymous'
 
-let details = {}
+let details: any = {}
 
-function readFunction(fn, functionName = null, _details = null) {
+function readFunction(fn: any, functionName = null, _details: any = null) {
   if (_details !== null) {
     details = _details
   }

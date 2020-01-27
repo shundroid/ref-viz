@@ -1,13 +1,12 @@
-const fs = require('fs')
-const path = require('path')
+import path from 'path'
 
-const readFile = require('./src/readFile')
-const updateServerData = require('./src/serve')
-const Scope = require('./src/lib/declaration')
+import readFile from './src/readFile'
+import updateServerData from './src/serve'
+import Scope from './src/lib/declaration'
 
 const fileAndInfos = {}
 
-const entryFile = path.normalize('./src/readFunction.js')
+const entryFile = path.normalize('./dist/src/readFunction.js')
 
 function onReadFile({ file, details }) {
   return new Promise((resolve, reject) => {
@@ -60,7 +59,7 @@ function fixImportReferences(file, details) {
 
 function toOneScope(fileAndInfos) {
   const scope = new Scope('root')
-  const files = Object.values(fileAndInfos)
+  const files: any = Object.values(fileAndInfos)
   for (let file of files) {
     scope.add(file.file)
   }

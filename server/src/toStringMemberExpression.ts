@@ -1,4 +1,4 @@
-const Reference = require('./lib/reference')
+import Reference from './lib/reference'
 
 function getMemberExpression(expression) {
   const members = []
@@ -30,4 +30,4 @@ function toStringMemberExpression(memberExpression) {
   return result
 }
 
-module.exports = toStringMemberExpression
+export default toStringMemberExpression

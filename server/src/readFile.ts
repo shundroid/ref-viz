@@ -1,17 +1,17 @@
-const Program = require('./lib/program')
-const readFunction = require('./readFunction')
-const bindReference = require('./bindReference')
-const acorn = require('acorn')
-const fs = require('fs')
+import readFunction from './readFunction'
+import bindReference from './bindReference'
+import { Parser } from 'acorn'
+import fs from 'fs'
 
-function readFile(filePath) {
+function readFile(filePath: string) {
   return new Promise((resolve, reject) => {
     fs.readFile(filePath, (err, data) => {
       if (err) {
         reject(err)
       }
       const details = {}
-      const result = readFunction(acorn.Parser.parse(data.toString()), filePath, details)
+      const result = readFunction(Parser.parse(data.toString()), filePath, details)
+      console.log(result)
       // run this in index.js?
       bindReference(result, [], details)
       // console.log(JSON.stringify(result))
@@ -35,4 +35,4 @@ function readFile(filePath) {
   })
 }
 
-module.exports = readFile
+export default readFile

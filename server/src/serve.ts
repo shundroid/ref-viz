@@ -1,4 +1,4 @@
-const http = require('http')
+import http from 'http'
 
 let data = null
 
@@ -10,6 +10,6 @@ http.createServer((req, res) => {
   res.end(JSON.stringify(data))
 }).listen(8081)
 
-module.exports = _data => {
+export default _data => {
   data = _data
 }
